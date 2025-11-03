@@ -1,0 +1,327 @@
+// NDEL Abstract Syntax Tree Protocol Buffer Definition
+// Version: 0.1.0
+
+syntax = "proto3";
+
+package ndel.ast;
+
+option go_package = "github.com/yourusername/ndel/go/ast";
+option java_package = "com.ndel.ast";
+option java_multiple_files = true;
+
+// Root node of an NDEL expression tree
+message Expression {
+  // Unique identifier for this node (used for metadata mapping)
+  int64 id = 1;
+  
+  // Source position information
+  SourcePosition position = 2;
+  
+  // Type information (if available from type checking)
+  Type type_info = 3;
+  
+  // Confidence metadata for this expression
+  ConfidenceMetadata confidence = 4;
+  
+  // The actual expression variant
+  oneof expr_kind {
+    Literal literal = 10;
+    Identifier identifier = 11;
+    BinaryOp binary_op = 12;
+    UnaryOp unary_op = 13;
+    Conditional conditional = 14;
+    FuzzyPredicate fuzzy_predicate = 15;
+    MemberAccess member_access = 16;
+    IndexAccess index_access = 17;
+    Call call = 18;
+    ListConstruct list_construct = 19;
+    MapConstruct map_construct = 20;
+    StructConstruct struct_construct = 21;
+  }
+}
+
+// Source position in the original text
+message SourcePosition {
+  int32 line = 1;
+  int32 column = 2;
+  int32 start_offset = 3;
+  int32 end_offset = 4;
+  string filename = 5;
+}
+
+// Type information
+message Type {
+  oneof type_kind {
+    PrimitiveType primitive = 1;
+    ListType list = 2;
+    MapType map = 3;
+    StructType struct = 4;
+    FuzzyType fuzzy = 5;
+    NullType null = 6;
+    AnyType any = 7;
+  }
+}
+
+message PrimitiveType {
+  enum Kind {
+    BOOL = 0;
+    INT = 1;
+    DOUBLE = 2;
+    STRING = 3;
+    BYTES = 4;
+  }
+  Kind kind = 1;
+}
+
+message ListType {
+  Type element_type = 1;
+}
+
+message MapType {
+  Type key_type = 1;
+  Type value_type = 2;
+}
+
+message StructType {
+  string name = 1;
+  map<string, Type> fields = 2;
+}
+
+message FuzzyType {
+  Type resolved_type = 1;  // Type after resolution
+  string original_value = 2;
+}
+
+message NullType {}
+message AnyType {}
+
+// Literal value
+message Literal {
+  oneof value {
+    bool bool_value = 1;
+    int64 int_value = 2;
+    uint64 uint_value = 3;
+    double double_value = 4;
+    string string_value = 5;
+    bytes bytes_value = 6;
+    bool null_value = 7;  // true if null
+  }
+}
+
+// Identifier reference
+message Identifier {
+  string name = 1;
+}
+
+// Binary operation
+message BinaryOp {
+  enum Operator {
+    ADD = 0;          // +
+    SUBTRACT = 1;     // -
+    MULTIPLY = 2;     // *
+    DIVIDE = 3;       // /
+    MODULO = 4;       // %
+    EQUAL = 5;        // ==
+    NOT_EQUAL = 6;    // !=
+    LESS = 7;         // 
+    LESS_EQUAL = 8;   // <=
+    GREATER = 9;      // >
+    GREATER_EQUAL = 10; // >=
+    LOGICAL_AND = 11; // &&
+    LOGICAL_OR = 12;  // ||
+    IN = 13;          // in
+  }
+  
+  Expression left = 1;
+  Operator operator = 2;
+  Expression right = 3;
+}
+
+// Unary operation
+message UnaryOp {
+  enum Operator {
+    NOT = 0;     // !
+    NEGATE = 1;  // -
+    POSITIVE = 2; // +
+  }
+  
+  Operator operator = 1;
+  Expression operand = 2;
+}
+
+// Conditional expression (ternary)
+message Conditional {
+  Expression condition = 1;
+  Expression true_branch = 2;
+  Expression false_branch = 3;
+}
+
+// Fuzzy predicate (e.g., player is "young")
+message FuzzyPredicate {
+  Expression subject = 1;
+  
+  enum Operator {
+    IS = 0;
+    SHOWS = 1;
+    APPROXIMATELY = 2;
+    ROUGHLY = 3;
+  }
+  Operator operator = 2;
+  
+  string fuzzy_value = 3;
+  
+  // Resolution information (filled during resolution phase)
+  Resolution resolution = 4;
+}
+
+// Fuzzy value resolution result
+message Resolution {
+  string resolved_expression = 1;  // The interpreted expression
+  double confidence = 2;            // Confidence score [0.0, 1.0]
+  string reasoning = 3;             // Explanation of interpretation
+  repeated Resolution alternatives = 4;  // Alternative interpretations
+  string domain = 5;                // Domain used for resolution
+}
+
+// Member access (e.g., object.field)
+message MemberAccess {
+  Expression object = 1;
+  string field = 2;
+}
+
+// Index access (e.g., list[0], map["key"])
+message IndexAccess {
+  Expression object = 1;
+  Expression index = 2;
+}
+
+// Function call
+message Call {
+  oneof target {
+    string function_name = 1;   // Global function
+    Expression object = 2;       // Method call
+  }
+  string method_name = 3;        // For method calls
+  repeated Expression arguments = 4;
+}
+
+// List construction
+message ListConstruct {
+  repeated Expression elements = 1;
+}
+
+// Map construction
+message MapConstruct {
+  repeated MapEntry entries = 1;
+}
+
+message MapEntry {
+  Expression key = 1;
+  Expression value = 2;
+}
+
+// Struct construction
+message StructConstruct {
+  string struct_name = 1;
+  repeated StructField fields = 2;
+}
+
+message StructField {
+  string name = 1;
+  Expression value = 2;
+}
+
+// Confidence metadata
+message ConfidenceMetadata {
+  double score = 1;                    // Overall confidence [0.0, 1.0]
+  string source = 2;                   // How confidence was determined
+  repeated ConfidenceComponent components = 3;  // Breakdown
+}
+
+message ConfidenceComponent {
+  string name = 1;        // Component name (e.g., "rule_match")
+  double value = 2;       // Component value
+  double weight = 3;      // Component weight
+  string description = 4; // Human-readable description
+}
+
+// Complete AST with metadata
+message AST {
+  Expression root = 1;
+  
+  // Metadata about the expression
+  Metadata metadata = 2;
+  
+  // All fuzzy values found in the expression
+  repeated FuzzyValue fuzzy_values = 3;
+  
+  // Domain context used
+  string domain = 4;
+  
+  // Parse errors (if any)
+  repeated ParseError errors = 5;
+}
+
+message Metadata {
+  string source_text = 1;
+  string parser_version = 2;
+  int64 parse_time_ms = 3;
+  map<string, string> properties = 4;
+}
+
+message FuzzyValue {
+  string value = 1;
+  SourcePosition position = 2;
+  string context_field = 3;
+  Type expected_type = 4;
+}
+
+message ParseError {
+  string message = 1;
+  SourcePosition position = 2;
+  string error_code = 3;
+}
+
+// Compiled expression ready for execution
+message CompiledExpression {
+  AST ast = 1;
+  
+  // All resolutions performed
+  repeated ResolutionRecord resolutions = 2;
+  
+  // Type checking results
+  TypeCheckResult type_check = 3;
+  
+  // Optimization hints
+  OptimizationHints hints = 4;
+  
+  // Overall confidence
+  double confidence = 5;
+}
+
+message ResolutionRecord {
+  string fuzzy_value = 1;
+  Resolution resolution = 2;
+  int64 resolution_time_ms = 3;
+}
+
+message TypeCheckResult {
+  bool success = 1;
+  repeated TypeError errors = 2;
+  map<int64, Type> expression_types = 3;  // Maps expression ID to type
+}
+
+message TypeError {
+  string message = 1;
+  int64 expression_id = 2;
+  Type expected = 3;
+  Type actual = 4;
+}
+
+message OptimizationHints {
+  bool can_cache = 1;
+  bool is_deterministic = 2;
+  bool has_side_effects = 3;
+  repeated string constant_folding = 4;
+  int32 estimated_cost = 5;
+}

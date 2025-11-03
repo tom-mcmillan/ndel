@@ -1,0 +1,393 @@
+// NDEL Soccer Domain Examples
+// Real-world player search and analysis queries
+
+@domain("soccer")
+
+// ============================================================================
+// PLAYER SEARCH QUERIES
+// ============================================================================
+
+// -----------------------------
+// 1. Young Striker Search
+// -----------------------------
+
+query FindYoungStrikers:
+  where position is "striker"
+    and age < "young"
+    and potential is "high"
+    and goals_per_90 > "decent for age"
+    and injury_history is "acceptable"
+    and wages are "within budget"
+  order by potential desc
+  limit 10
+
+// Expected resolution:
+// position IN ('ST', 'CF')
+// AND age < 23  
+// AND potential_rating > 80
+// AND goals_per_90 > 0.4
+// AND days_injured_last_2_seasons < 60
+// AND wages < team_wage_budget * 0.15
+
+// -----------------------------
+// 2. Replacement Search
+// -----------------------------
+
+query FindReplacement(departing_player):
+  where position == departing_player.position
+    and age is "similar or younger"
+    and quality is "comparable"
+    and style is "compatible with tactics"
+    and availability is "realistic"
+    and adaptation_time is "minimal"
+
+// -----------------------------
+// 3. Bargain Hunt
+// -----------------------------
+
+query FindBargains:
+  where performance is "above average"
+    and market_value is "undervalued"
+    and (contract_remaining < "short" or has(release_clause))
+    and age is "not too old"
+    and wages are "reasonable"
+  compute value_ratio = performance_rating / market_value
+  order by value_ratio desc
+
+// ============================================================================
+// PERFORMANCE ANALYSIS
+// ============================================================================
+
+// -----------------------------
+// 4. Form Analysis
+// -----------------------------
+
+query AnalyzeForm(player_name):
+  let player = find_player(player_name)
+  where player.recent_form shows "improving trend"
+    and player.fitness is "good"
+    and player.confidence seems "high"
+    and player.team_role is "important"
+  
+  return {
+    current_level: player.form is "excellent" ? "Peak" : "Building",
+    projection: trend shows "sustainable" ? "Maintain" : "Uncertain",
+    risk_factors: identify_risks(player)
+  }
+
+// -----------------------------
+// 5. Clinical Finishers
+// -----------------------------
+
+query ClinicalFinishers:
+  where position is "attacking"
+    and finishing is "clinical"
+    and composure is "excellent under pressure"
+    and big_game_performance is "reliable"
+  
+// Resolves to:
+// position IN ('ST', 'CF', 'LW', 'RW', 'CAM')
+// AND goals_per_shot > 0.15
+// AND (goals - xG) / games > 0.1  // Overperforming xG
+// AND high_pressure_conversion_rate > 0.35
+// AND important_goals / total_goals > 0.3
+
+// -----------------------------
+// 6. Team Comparison
+// -----------------------------
+
+query CompareTeams(team1, team2):
+  let t1_strength = team1.players.filter(p, p is "key player")
+                           .average(p, p.overall_rating)
+  let t2_strength = team2.players.filter(p, p is "key player")
+                           .average(p, p.overall_rating)
+  
+  return {
+    stronger: t1_strength > t2_strength ? team1 : team2,
+    difference: abs(t1_strength - t2_strength) is "significant",
+    key_matchups: find_key_battles(team1, team2)
+  }
+
+// ============================================================================
+// TACTICAL ANALYSIS
+// ============================================================================
+
+// -----------------------------
+// 7. Tactical Fit
+// -----------------------------
+
+query AssessTacticalFit(player, formation):
+  where player fits "required_attributes" for formation
+    and player.work_rate is "appropriate for role"
+    and player.teamwork is "sufficient"
+    and player.versatility is "bonus"
+
+// For 4-3-3 attacking winger:
+// pace > "fast"
+// AND dribbling is "excellent"  
+// AND crossing is "good" OR cutting_inside is "excellent"
+// AND defensive_contribution is "adequate"
+
+// -----------------------------
+// 8. Pressing Intensity
+// -----------------------------
+
+query HighPressPlayers:
+  where stamina is "excellent"
+    and work_rate is "very high"
+    and positioning is "intelligent"
+    and speed is "above average"
+    and aggression is "controlled"
+  compute press_score = (pressures_per_90 * success_rate) / stamina_cost
+  order by press_score desc
+
+// ============================================================================
+// TRANSFER MARKET
+// ============================================================================
+
+// -----------------------------
+// 9. Transfer Targets
+// -----------------------------
+
+query TransferTargets(budget, needs):
+  where position in needs.positions
+    and quality is "improvement on current"
+    and price < budget * "sensible proportion"
+    and age fits "transfer policy"
+    and reputation is "manageable"
+    and wage_demands are "sustainable"
+  rank by (quality_improvement * need_urgency) / total_cost
+
+// -----------------------------
+// 10. Loan Candidates
+// -----------------------------
+
+query LoanCandidates:
+  where age < "young prospect"
+    and playing_time < "insufficient for development"
+    and potential is "worth developing"
+    and loan_interest exists "from appropriate level"
+  order by development_priority desc
+
+// ============================================================================
+// INJURY AND FITNESS
+// ============================================================================
+
+// -----------------------------
+// 11. Injury Risk Assessment
+// -----------------------------
+
+query InjuryRiskAssessment:
+  where injury_history shows "concerning pattern"
+    or age is "injury prone years"
+    or workload is "excessive"
+    or recovery_time is "insufficient"
+  compute risk_level = calculate_injury_probability()
+  flag if risk_level is "high"
+
+// -----------------------------
+// 12. Fitness Optimization
+// -----------------------------
+
+query OptimalRotation:
+  for each player in squad:
+    if player.fatigue is "high" 
+       and next_match.importance is "low"
+       and backup.quality is "adequate":
+      recommend "rest"
+    else if player.match_fitness is "declining":
+      recommend "minutes needed"
+    else:
+      recommend "available"
+
+// ============================================================================
+// YOUTH DEVELOPMENT
+// ============================================================================
+
+// -----------------------------
+// 13. Academy Prospects
+// -----------------------------
+
+query AcademyProspects:
+  where age < "youth"
+    and growth_rate shows "exceptional"
+    and mentality is "professional"
+    and physical_development is "on track"
+  project future_rating = current + (potential - current) * development_curve
+  order by projected_value desc
+
+// -----------------------------
+// 14. Development Path
+// -----------------------------
+
+query DevelopmentPlan(young_player):
+  if young_player needs "physical development":
+    recommend "gym focus"
+  else if young_player needs "tactical understanding":
+    recommend "reserve team"
+  else if young_player is "ready for exposure":
+    recommend "first team rotation"
+  else:
+    recommend "loan for experience"
+
+// ============================================================================
+// MATCH ANALYSIS
+// ============================================================================
+
+// -----------------------------
+// 15. Opposition Analysis
+// -----------------------------
+
+query AnalyzeOpposition(opponent):
+  identify weaknesses:
+    where opponent.defense shows "vulnerability"
+      or opponent.midfield is "overrun easily"
+      or opponent.goalkeeper is "error prone"
+      or opponent.discipline is "poor"
+  
+  identify threats:
+    where opponent.attack is "clinical"
+      or opponent.set_pieces are "dangerous"
+      or opponent.counter is "lethal"
+      or opponent.key_player is "difference maker"
+
+// -----------------------------
+// 16. Match Prediction
+// -----------------------------
+
+query PredictMatch(home_team, away_team, conditions):
+  let home_strength = home_team.form is "good" 
+                      and home_team.home_record is "strong"
+  let away_strength = away_team.form is "good"
+                      and away_team.away_record is "decent"
+  let weather_impact = conditions.weather affects "playing style significantly"
+  
+  predict {
+    likely_winner: confidence() > 0.7 ? "clear favorite" : "close match",
+    goal_expectation: "typical for these teams",
+    key_factor: determine_deciding_factor()
+  }
+
+// ============================================================================
+// SEASON ANALYSIS
+// ============================================================================
+
+// -----------------------------
+// 17. Title Race
+// -----------------------------
+
+query TitleRaceAnalysis:
+  where points_gap is "catchable"
+    and games_remaining is "sufficient"
+    and form shows "momentum"
+    and fixture_difficulty is "manageable"
+    and squad_depth is "adequate for run-in"
+  compute probability = calculate_title_chances()
+
+// -----------------------------
+// 18. Relegation Battle
+// -----------------------------
+
+query RelegationThreat:
+  where league_position is "dangerous"
+    and points_from_safety is "concerning"
+    and recent_results show "poor form"
+    and remaining_fixtures are "difficult"
+    and squad_morale seems "low"
+  flag urgency as "critical"
+
+// ============================================================================
+// COMPLEX QUERIES
+// ============================================================================
+
+// -----------------------------
+// 19. Complete Squad Analysis
+// -----------------------------
+
+query SquadAnalysis(team):
+  analyze {
+    strength: {
+      overall: team.quality is "title contender",
+      depth: team.bench_quality is "sufficient",
+      balance: team.positions_covered is "well",
+      age: team.age_profile is "good mix"
+    },
+    weaknesses: {
+      positions: find_positions where cover is "thin",
+      quality_gaps: where drop_off is "significant",
+      physical: where attributes are "below par"
+    },
+    recommendations: {
+      transfers: suggest_targets(team.weaknesses, team.budget),
+      development: identify_internal_solutions(team.youth),
+      tactical: suggest_system_changes(team.players)
+    }
+  }
+
+// -----------------------------
+// 20. Performance vs Investment
+// -----------------------------
+
+query ValueForMoney:
+  let performance_score = {
+    league_position * 10 +
+    points_per_game * 20 +
+    goal_difference * 5 +
+    trophies_won * 50
+  }
+  
+  let investment = {
+    transfer_spend +
+    wage_bill +
+    facility_costs
+  }
+  
+  where (performance_score / investment) is "good value"
+    or (performance_score / investment) is "poor value"
+  
+  explain why ratio is "above or below expectations"
+
+// ============================================================================
+// NATURAL LANGUAGE STYLE QUERIES
+// ============================================================================
+
+// -----------------------------
+// 21. Conversational Query
+// -----------------------------
+
+"Find me a left-footed playmaker who's entering their prime years,
+ has excellent vision and passing range, doesn't mind sitting deep,
+ but can also drive forward when needed. Preferably someone who's
+ proven at international level but won't break the bank."
+
+// Resolves to:
+query:
+  where preferred_foot == "left"
+    and position is "creative midfielder"
+    and age is "peak years"  // 25-29
+    and passing is "excellent"
+    and vision is "outstanding"
+    and defensive_contribution is "willing"
+    and dribbling is "capable"
+    and international_caps > "experienced"
+    and market_value is "reasonable for quality"
+
+// -----------------------------
+// 22. Scout Report Style
+// -----------------------------
+
+"He's got that rare combination of pace and intelligence,
+ knows when to make the run, when to hold back. Not the tallest
+ but wins his fair share in the air through timing. Bit raw still
+ but you can see the quality. Reminds me of a young Torres."
+
+// System interprets as:
+query TemplateMatch:
+  where pace is "quick"
+    and positioning is "intelligent"
+    and movement is "excellent"
+    and timing is "good"
+    and aerial_ability is "decent for height"
+    and potential is "very high"
+    and current_ability is "developing"
+    and playing_style similar_to "Fernando Torres"

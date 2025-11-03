@@ -1,0 +1,340 @@
+// NDEL Value Types Protocol Buffer Definition
+// Version: 0.1.0
+
+syntax = "proto3";
+
+package ndel.value;
+
+option go_package = "github.com/yourusername/ndel/go/value";
+option java_package = "com.ndel.value";
+option java_multiple_files = true;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/struct.proto";
+
+// Runtime value in NDEL
+message Value {
+  oneof kind {
+    NullValue null_value = 1;
+    bool bool_value = 2;
+    int64 int_value = 3;
+    uint64 uint_value = 4;
+    double double_value = 5;
+    string string_value = 6;
+    bytes bytes_value = 7;
+    ListValue list_value = 8;
+    MapValue map_value = 9;
+    StructValue struct_value = 10;
+    FuzzyValue fuzzy_value = 11;
+    ErrorValue error_value = 12;
+    TypeValue type_value = 13;
+    google.protobuf.Timestamp timestamp_value = 14;
+    google.protobuf.Duration duration_value = 15;
+  }
+  
+  // Confidence score for this value (especially for resolved fuzzy values)
+  double confidence = 20;
+  
+  // Alternative values (for fuzzy resolutions)
+  repeated AlternativeValue alternatives = 21;
+  
+  // Source information (for debugging)
+  ValueSource source = 22;
+}
+
+// Null value
+message NullValue {}
+
+// List of values
+message ListValue {
+  repeated Value elements = 1;
+}
+
+// Map of values
+message MapValue {
+  repeated MapEntry entries = 1;
+}
+
+message MapEntry {
+  Value key = 1;
+  Value value = 2;
+}
+
+// Structured value (like a class instance)
+message StructValue {
+  string type_name = 1;
+  map<string, Value> fields = 2;
+}
+
+// Fuzzy value that needs resolution
+message FuzzyValue {
+  string original = 1;              // Original fuzzy string
+  Value resolved = 2;               // Resolved value (if resolved)
+  ResolutionStatus status = 3;     // Resolution status
+  string domain = 4;                // Domain context used
+  string reasoning = 5;             // Explanation
+}
+
+enum ResolutionStatus {
+  UNRESOLVED = 0;
+  RESOLVED = 1;
+  FAILED = 2;
+  AMBIGUOUS = 3;
+}
+
+// Error value
+message ErrorValue {
+  string error_type = 1;
+  string message = 2;
+  string details = 3;
+  Value partial_result = 4;  // Partial result if available
+}
+
+// Type as a value
+message TypeValue {
+  string type_name = 1;
+  TypeInfo info = 2;
+}
+
+message TypeInfo {
+  bool is_primitive = 1;
+  bool is_fuzzy = 2;
+  bool is_nullable = 3;
+  repeated string allowed_operations = 4;
+}
+
+// Alternative value with confidence
+message AlternativeValue {
+  Value value = 1;
+  double confidence = 2;
+  string reasoning = 3;
+}
+
+// Source information for a value
+message ValueSource {
+  enum Kind {
+    LITERAL = 0;      // From literal in expression
+    COMPUTED = 1;     // Computed from expression
+    RESOLVED = 2;     // Resolved from fuzzy value
+    EXTERNAL = 3;     // From external data source
+    DEFAULT = 4;      // Default value
+  }
+  Kind kind = 1;
+  string description = 2;
+  int64 expression_id = 3;  // References Expression.id from AST
+}
+
+// Result of evaluating an expression
+message EvaluationResult {
+  Value value = 1;
+  double confidence = 2;
+  repeated ResolutionRecord resolutions = 3;
+  EvaluationMetrics metrics = 4;
+  repeated Warning warnings = 5;
+}
+
+message ResolutionRecord {
+  string fuzzy_value = 1;
+  Value resolved_value = 2;
+  double confidence = 3;
+  int64 resolution_time_us = 4;
+  string strategy_used = 5;
+}
+
+message EvaluationMetrics {
+  int64 total_time_us = 1;
+  int64 resolution_time_us = 2;
+  int64 computation_time_us = 3;
+  int32 expressions_evaluated = 4;
+  int32 fuzzy_values_resolved = 5;
+  int32 cache_hits = 6;
+  int32 cache_misses = 7;
+}
+
+message Warning {
+  string code = 1;
+  string message = 2;
+  double confidence_impact = 3;
+}
+
+// Value comparison result
+message ComparisonResult {
+  enum Ordering {
+    LESS = 0;
+    EQUAL = 1;
+    GREATER = 2;
+    INCOMPARABLE = 3;
+  }
+  Ordering ordering = 1;
+  double confidence = 2;
+}
+
+// Type conversion request/result
+message ConversionRequest {
+  Value from_value = 1;
+  string to_type = 2;
+  bool strict = 3;  // If true, fail on precision loss
+}
+
+message ConversionResult {
+  bool success = 1;
+  Value converted = 2;
+  string error_message = 3;
+  double confidence = 4;
+}
+
+// Domain-specific value extensions
+message DomainValue {
+  string domain = 1;
+  
+  oneof domain_specific {
+    SoccerValue soccer = 10;
+    FinanceValue finance = 11;
+    HealthcareValue healthcare = 12;
+  }
+}
+
+// Soccer domain values
+message SoccerValue {
+  oneof kind {
+    Position position = 1;
+    Formation formation = 2;
+    MatchEvent match_event = 3;
+    Performance performance = 4;
+  }
+}
+
+message Position {
+  enum Role {
+    GK = 0;
+    CB = 1;
+    LB = 2;
+    RB = 3;
+    CDM = 4;
+    CM = 5;
+    CAM = 6;
+    LW = 7;
+    RW = 8;
+    ST = 9;
+    CF = 10;
+  }
+  Role role = 1;
+  repeated string attributes = 2;  // ["defensive", "playmaker", etc.]
+}
+
+message Formation {
+  string code = 1;  // "4-3-3", "3-5-2", etc.
+  repeated Position positions = 2;
+}
+
+message MatchEvent {
+  string type = 1;  // "goal", "assist", "yellow_card", etc.
+  int32 minute = 2;
+  string player_id = 3;
+}
+
+message Performance {
+  double rating = 1;
+  map<string, double> metrics = 2;  // {"pass_accuracy": 0.85, ...}
+  string trend = 3;  // "improving", "declining", "stable"
+}
+
+// Finance domain values
+message FinanceValue {
+  oneof kind {
+    Money money = 1;
+    Percentage percentage = 2;
+    TradingSignal signal = 3;
+    RiskLevel risk = 4;
+  }
+}
+
+message Money {
+  double amount = 1;
+  string currency = 2;
+}
+
+message Percentage {
+  double value = 1;  // 0.15 = 15%
+  bool is_change = 2;  // true if it's a change (+15%)
+}
+
+message TradingSignal {
+  enum Signal {
+    STRONG_BUY = 0;
+    BUY = 1;
+    HOLD = 2;
+    SELL = 3;
+    STRONG_SELL = 4;
+  }
+  Signal signal = 1;
+  double confidence = 2;
+}
+
+message RiskLevel {
+  enum Level {
+    VERY_LOW = 0;
+    LOW = 1;
+    MODERATE = 2;
+    HIGH = 3;
+    VERY_HIGH = 4;
+  }
+  Level level = 1;
+  double score = 2;  // Numeric risk score
+}
+
+// Healthcare domain values
+message HealthcareValue {
+  oneof kind {
+    VitalSign vital = 1;
+    Diagnosis diagnosis = 2;
+    Medication medication = 3;
+    RiskScore risk_score = 4;
+  }
+}
+
+message VitalSign {
+  string type = 1;  // "blood_pressure", "heart_rate", etc.
+  double value = 2;
+  string unit = 3;
+  string status = 4;  // "normal", "elevated", "critical"
+}
+
+message Diagnosis {
+  string code = 1;  // ICD-10 code
+  string name = 2;
+  double certainty = 3;
+}
+
+message Medication {
+  string name = 1;
+  double dosage = 2;
+  string unit = 3;
+  string frequency = 4;
+}
+
+message RiskScore {
+  string risk_type = 1;
+  double score = 2;
+  string category = 3;  // "low", "medium", "high"
+}
+
+// Value validation
+message ValidationRule {
+  string name = 1;
+  string expression = 2;  // NDEL expression for validation
+  string error_message = 3;
+}
+
+message ValidationResult {
+  bool valid = 1;
+  repeated ValidationError errors = 2;
+}
+
+message ValidationError {
+  string rule_name = 1;
+  string message = 2;
+  Value actual_value = 3;
+  string expected = 4;
+}

@@ -1,0 +1,155 @@
+// NDEL Hello World Examples
+// These examples demonstrate basic NDEL syntax and features
+
+// ============================================================================
+// Example 1: Simple Deterministic Expression
+// ============================================================================
+
+// Traditional boolean logic (fully deterministic)
+age >= 18 && status == "active"
+
+// ============================================================================
+// Example 2: Basic Fuzzy Value
+// ============================================================================
+
+// Using fuzzy comparison
+age < "young"  // "young" will be interpreted based on domain context
+
+// ============================================================================
+// Example 3: Fuzzy Predicates
+// ============================================================================
+
+// Using the 'is' operator for fuzzy matching
+player is "promising"
+
+// Multiple fuzzy predicates
+player is "young" && performance is "excellent"
+
+// ============================================================================
+// Example 4: Mixed Deterministic and Fuzzy
+// ============================================================================
+
+// Combining precise and fuzzy values
+salary < 100000 && potential is "high" && age < "veteran"
+
+// ============================================================================
+// Example 5: Domain-Specific Expression
+// ============================================================================
+
+@domain("soccer")
+
+// Soccer-specific fuzzy terms
+where player is "clinical finisher" 
+  && form shows "improving trend"
+  && salary is "reasonable for talent"
+
+// ============================================================================
+// Example 6: Confidence Control
+// ============================================================================
+
+// Require high confidence for critical decisions
+with_confidence(0.9, player is "world class")
+
+// Check confidence level
+if confidence() > 0.8 then
+  "high confidence match"
+else
+  "needs review"
+
+// ============================================================================
+// Example 7: Lists and Filtering
+// ============================================================================
+
+// Filter with fuzzy criteria
+players.filter(p, p.age < "young" && p.potential is "high")
+
+// Check if any player matches fuzzy criteria
+players.exists(p, p is "injury prone")
+
+// ============================================================================
+// Example 8: Complex Fuzzy Expression
+// ============================================================================
+
+@domain("soccer")
+
+// Find players worth signing
+(player is "young talented striker" || player is "experienced playmaker")
+  && performance shows "consistency"
+  && injury_record is "acceptable"
+  && wage_demands are "within budget"
+  && (has(release_clause) ? release_clause < "reasonable" : true)
+
+// ============================================================================
+// Example 9: Pattern Matching
+// ============================================================================
+
+// Detect patterns in data
+recent_form shows "upward trend"
+  && last_season shows "breakthrough"
+  && fitness shows "no concerns"
+
+// ============================================================================
+// Example 10: Natural Language-like Query
+// ============================================================================
+
+@domain("soccer")
+
+// Almost reads like natural language
+find players where
+  position is "defensive midfielder"
+  and age is "prime years"
+  and passing is "excellent"
+  and defensive_skills are "strong"
+  and leadership shows "captain material"
+  and transfer_value is "good value for money"
+
+// ============================================================================
+// Example 11: Conditional Logic with Fuzzy Values
+// ============================================================================
+
+// Different criteria based on conditions
+if team_need == "urgent" then
+  player is "proven performer" && available is "immediately"
+else
+  player is "high potential" && development_time is "acceptable"
+
+// ============================================================================
+// Example 12: Working with Alternatives
+// ============================================================================
+
+// Get alternative interpretations
+alternatives().size() > 0 ? 
+  "Multiple interpretations available" : 
+  "Single interpretation"
+
+// ============================================================================
+// Example 13: Temporal Fuzzy Values
+// ============================================================================
+
+// Time-based fuzzy values
+last_injury was "recent" 
+  && recovery is "complete"
+  && match_fitness is "approaching peak"
+
+// ============================================================================
+// Example 14: Aggregations with Fuzzy Filters
+// ============================================================================
+
+// Calculate statistics with fuzzy filtering
+average(
+  players
+    .filter(p, p is "regular starter")
+    .map(p, p.goals_per_game)
+) > "good striker output"
+
+// ============================================================================
+// Example 15: Cross-Domain Example
+// ============================================================================
+
+@domain("finance")
+
+// Same syntax, different domain
+stock shows "bullish pattern"
+  && volume is "above average"  
+  && volatility is "acceptable"
+  && pe_ratio is "undervalued"
