@@ -1,0 +1,18 @@
+# Core dependencies
+dataclasses>=0.6; python_version < '3.7'
+typing-extensions>=4.0.0; python_version < '3.8'
+
+# Optional: For ML-based fuzzy resolution
+openai>=1.0.0
+numpy>=1.20.0
+scikit-learn>=1.0.0
+
+# Development dependencies
+pytest>=7.0.0
+black>=22.0.0
+flake8>=5.0.0
+mypy>=1.0.0
+
+# Documentation
+sphinx>=5.0.0
+sphinx-rtd-theme>=1.0.0
