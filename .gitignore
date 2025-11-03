@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+
+# Generated
+*.tokens
+*.interp
+*.class
+*.java
+
+# OS
+.DS_Store
+Thumbs.db
