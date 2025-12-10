@@ -2,51 +2,77 @@
 
 __version__ = "0.2.0"
 
-from .parser import parse_ndel, print_ast
-from .ast import (
-    ASTNode, Literal, Identifier, BinaryOp, UnaryOp,
-    FuzzyPredicate, MemberAccess, IndexAccess, Call,
-    ListLiteral, MapLiteral, DomainDeclaration, Conditional
-)
-from .translator import translate
-from .domains import DomainConfig, apply_domain
-
 from typing import Optional
 
+from ndel.api import describe_callable, describe_python_source
+from ndel.ast import (
+    ASTNode,
+    BinaryOp,
+    Call,
+    Conditional,
+    DomainDeclaration,
+    FuzzyPredicate,
+    Identifier,
+    IndexAccess,
+    ListLiteral,
+    Literal,
+    MapLiteral,
+    MemberAccess,
+    UnaryOp,
+)
+from ndel.config import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
+from ndel.domains import DomainConfig as LegacyDomainConfig
+from ndel.domains import apply_domain
+from ndel.parser import parse_ndel, print_ast
+from ndel.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
+from ndel.translator import translate
 
-def describe(python_code: str, domain: Optional[DomainConfig] = None) -> str:
-    """
-    Convert Python code to human-readable NDEL description.
+__version__ = "0.2.0"
 
-    Args:
-        python_code: Python code containing SQL queries or pandas operations
-        domain: Optional vocabulary mappings provided by consuming application
 
-    Returns:
-        Human-readable NDEL description
+def describe(python_code: str, domain: Optional[LegacyDomainConfig] = None) -> str:
+    """Backward-compatible describe entrypoint using the legacy translator."""
 
-    Example:
-        >>> describe('pd.read_sql("SELECT name FROM users", conn)')
-        'FIND name FROM users'
-
-        >>> describe(code, domain={"tables": {"users": "customers"}})
-        'FIND name FROM customers'
-    """
-    try:
-        ndel_text = translate(python_code)
-        return apply_domain(ndel_text, domain)
-    except Exception:
-        return "Analysis performed"
+    ndel_text = translate(python_code)
+    return apply_domain(ndel_text, domain)
 
 
 __all__ = [
-    # Main API
-    "describe",
-    "DomainConfig",
+    # Primary public API
+    "describe_python_source",
+    "describe_callable",
 
-    # Lower-level access
+    # Semantic model
+    "Pipeline",
+    "Dataset",
+    "Transformation",
+    "Feature",
+    "Model",
+    "Metric",
+
+    # Configuration
+    "NdelConfig",
+    "PrivacyConfig",
+    "DomainConfig",
+    "AbstractionLevel",
+
+    # Compatibility API
+    "describe",
     "translate",
     "apply_domain",
     "parse_ndel",
     "print_ast",
+    "ASTNode",
+    "Literal",
+    "Identifier",
+    "BinaryOp",
+    "UnaryOp",
+    "FuzzyPredicate",
+    "MemberAccess",
+    "IndexAccess",
+    "Call",
+    "ListLiteral",
+    "MapLiteral",
+    "DomainDeclaration",
+    "Conditional",
 ]

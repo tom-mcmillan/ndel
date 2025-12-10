@@ -2,16 +2,18 @@ from __future__ import annotations
 
 from typing import Any
 
+from ndel.config import NdelConfig
 from .semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
 
 
-def render_pipeline(pipeline: Pipeline) -> str:
+def render_pipeline(pipeline: Pipeline, config: NdelConfig | None = None) -> str:
     """Render a Pipeline into human-readable NDEL text."""
 
     def indent(level: int) -> str:
         return "  " * level
 
-    lines: list[str] = [f'pipeline "{pipeline.name}":']
+    pipeline_name = config.domain.pipeline_name if config and config.domain else pipeline.name
+    lines: list[str] = [f'pipeline "{pipeline_name}":']
 
     if pipeline.description:
         lines.append(f"{indent(1)}description: {pipeline.description}")
