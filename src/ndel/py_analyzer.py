@@ -22,6 +22,7 @@ class PythonAnalyzer(ast.NodeVisitor):
 
         self.datasets: Dict[str, Dataset] = {}
         self.models: Dict[str, Model] = {}
+        self.features: Dict[str, Feature] = {}
         self.transformations: list[Transformation] = []
 
     def analyze(self) -> Pipeline:
@@ -31,6 +32,7 @@ class PythonAnalyzer(ast.NodeVisitor):
 
         datasets = list(self.datasets.values())
         models = list(self.models.values())
+        features = list(self.features.values())
 
         if domain:
             for ds in datasets:
@@ -41,6 +43,10 @@ class PythonAnalyzer(ast.NodeVisitor):
                 alias = domain.model_aliases.get(model.name)
                 if alias:
                     model.name = alias
+            for feature in features:
+                alias = domain.feature_aliases.get(feature.name)
+                if alias:
+                    feature.name = alias
 
         pipeline_name = domain.pipeline_name if domain and domain.pipeline_name else "python_pipeline"
 
@@ -48,7 +54,7 @@ class PythonAnalyzer(ast.NodeVisitor):
             name=pipeline_name,
             datasets=datasets,
             transformations=self.transformations,
-            features=[],
+            features=features,
             models=models,
             metrics=[],
             description=None,
@@ -102,6 +108,8 @@ class PythonAnalyzer(ast.NodeVisitor):
                 model = self.models.get(model_var)
                 if model and model.description is None:
                     model.description = "trained via .fit() call"
+            if node.args:
+                self._capture_features_from_fit(node.args[0])
 
         self.generic_visit(node)
 
@@ -143,6 +151,8 @@ class PythonAnalyzer(ast.NodeVisitor):
                     outputs=[output],
                 )
             )
+            if col_name:
+                self._add_feature(col_name, origin=dataset_name)
             return
 
         # Aggregation: df = df.groupby(...).agg(...)
@@ -209,6 +219,44 @@ class PythonAnalyzer(ast.NodeVisitor):
         if isinstance(node, ast.Name):
             return node.id
         return None
+
+    def _add_feature(self, name: str, origin: str | None = None, description: str | None = None) -> None:
+        if name in self.features:
+            return
+        self.features[name] = Feature(
+            name=name,
+            description=description or "derived feature from column assignment",
+            origin=origin,
+            data_type=None,
+        )
+
+    def _capture_features_from_fit(self, arg: ast.AST) -> None:
+        """Capture feature names from model.fit arguments like df[["a", "b"]]."""
+
+        if isinstance(arg, ast.Subscript):
+            cols = self._extract_columns_from_subscript(arg)
+            origin = arg.value.id if isinstance(arg.value, ast.Name) else None
+            for col in cols:
+                self._add_feature(col, origin=origin, description="feature used in model training")
+
+    def _extract_columns_from_subscript(self, node: ast.Subscript) -> list[str]:
+        cols: list[str] = []
+        slice_node = node.slice
+        if isinstance(slice_node, ast.List):
+            for elt in slice_node.elts:
+                if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                    cols.append(elt.value)
+        elif isinstance(slice_node, ast.Constant) and isinstance(slice_node.value, str):
+            cols.append(slice_node.value)
+        elif isinstance(slice_node, ast.Index):  # type: ignore[attr-defined]
+            inner = slice_node.value  # type: ignore[assignment]
+            if isinstance(inner, ast.List):
+                for elt in inner.elts:
+                    if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                        cols.append(elt.value)
+            elif isinstance(inner, ast.Constant) and isinstance(inner.value, str):
+                cols.append(inner.value)
+        return cols
 
 
 def analyze_python_source(source: str, config: NdelConfig | None = None) -> Pipeline:
