@@ -7,6 +7,7 @@ from typing import Any, Literal
 @dataclass
 class Dataset:
     name: str
+    source: str | None = None
     description: str | None = None
     source_type: Literal["table", "view", "file", "feature_store", "other"] | None = None
     notes: list[str] = field(default_factory=list)

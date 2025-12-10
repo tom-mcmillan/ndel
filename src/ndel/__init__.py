@@ -4,7 +4,14 @@ __version__ = "0.2.0"
 
 from typing import Optional
 
-from ndel.api import describe_callable, describe_python_source, describe_sql_source
+from ndel.api import (
+    describe_callable,
+    describe_pipeline_diff,
+    describe_python_source,
+    describe_sql_source,
+    describe_sql_and_python,
+    validate_config,
+)
 from ndel.ast import (
     ASTNode,
     BinaryOp,
@@ -25,6 +32,7 @@ from ndel.domains import DomainConfig as LegacyDomainConfig
 from ndel.domains import apply_domain
 from ndel.parser import parse_ndel, print_ast
 from ndel.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
+from ndel.validation import ValidationIssue
 from ndel.translator import translate
 
 __version__ = "0.2.0"
@@ -41,6 +49,9 @@ __all__ = [
     # Primary public API
     "describe_python_source",
     "describe_callable",
+    "describe_sql_and_python",
+    "describe_pipeline_diff",
+    "validate_config",
     "describe_sql_source",
 
     # Semantic model
@@ -56,6 +67,8 @@ __all__ = [
     "PrivacyConfig",
     "DomainConfig",
     "AbstractionLevel",
+    "ValidationIssue",
+    "describe_pipeline_diff",
 
     # Compatibility API
     "describe",

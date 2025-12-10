@@ -16,3 +16,5 @@ model.fit(df[["a", "b"]], df["y"])
     assert pipeline.name == "python_pipeline"
     assert any(ds.name == "df" for ds in pipeline.datasets)
     assert any(m.algorithm_family == "XGBClassifier" for m in pipeline.models)
+    assert all(t.inputs for t in pipeline.transformations)
+    assert all(t.outputs for t in pipeline.transformations)

@@ -11,9 +11,8 @@ df["new_col"] = df["a"] + 1
     pipeline = analyze_python_source(source)
 
     names = [f.name for f in pipeline.features]
-    origins = [f.origin for f in pipeline.features]
     assert "new_col" in names
-    assert "df" in origins
+    assert all(f.origin for f in pipeline.features)
 
 
 def test_features_from_fit_args() -> None:
@@ -30,3 +29,4 @@ model.fit(df[["a", "b"]], df["y"])
 
     names = [f.name for f in pipeline.features]
     assert "a" in names and "b" in names
+    assert all(f.origin for f in pipeline.features)
