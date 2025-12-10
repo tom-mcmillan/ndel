@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 from ndel.config import NdelConfig
 from ndel.py_analyzer import analyze_python_source
+from ndel.sql_analyzer import analyze_sql_source
 from ndel.render import render_pipeline
 
 
@@ -35,4 +36,11 @@ def describe_callable(func: Callable, config: NdelConfig | None = None) -> str:
     return describe_python_source(textwrap.dedent(source), config=config)
 
 
-__all__ = ["describe_python_source", "describe_callable"]
+def describe_sql_source(sql: str, config: NdelConfig | None = None) -> str:
+    """Analyze SQL text and render an NDEL pipeline description."""
+
+    pipeline = analyze_sql_source(sql, config=config)
+    return render_pipeline(pipeline, config=config)
+
+
+__all__ = ["describe_python_source", "describe_callable", "describe_sql_source"]

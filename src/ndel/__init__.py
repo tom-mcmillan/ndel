@@ -4,7 +4,7 @@ __version__ = "0.2.0"
 
 from typing import Optional
 
-from ndel.api import describe_callable, describe_python_source
+from ndel.api import describe_callable, describe_python_source, describe_sql_source
 from ndel.ast import (
     ASTNode,
     BinaryOp,
@@ -41,6 +41,7 @@ __all__ = [
     # Primary public API
     "describe_python_source",
     "describe_callable",
+    "describe_sql_source",
 
     # Semantic model
     "Pipeline",
