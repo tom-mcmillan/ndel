@@ -53,6 +53,14 @@ Config is optional when experimenting; start with `describe_python_source` or `d
 
 Implementation code → parsed (Python/SQL) → semantic model (datasets, transformations, features, models, metrics, lineage) → rendered NDEL text with privacy/abstraction applied. SQL and Python pipelines can be merged for unified lineage (SQL → Python → model).
 
+## Further Reading
+
+- [Architecture Overview](docs/overview.md)
+- [Bootstrap Config Prompt](docs/bootstrap_ndel_config_prompt.md)
+- [Cookbook: Churn-Style Pipeline](docs/cookbook_churn_pipeline.md)
+- [Cookbook: CI Integration](docs/cookbook_ci_integration.md)
+- [Cookbook: Custom Feature Store Detector](docs/cookbook_custom_feature_store_detector.md)
+
 ## Status
 
 Early and experimental. Expect rapid iteration and changes.

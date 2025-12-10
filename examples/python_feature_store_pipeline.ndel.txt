@@ -1,0 +1,27 @@
+# NDEL description for examples/python_feature_store_pipeline.py
+pipeline "python_pipeline":
+  datasets:
+    - name: feature_store_inputs
+  transformations:
+    - name: trans_feature_engineering_1
+      kind: feature_engineering
+      description: load features user_activity_7d, user_tenure_days from feature store
+      inputs:
+        - feature_store_inputs
+      outputs:
+        - user_activity_7d
+        - user_tenure_days
+  features:
+    - name: user_activity_7d
+      origin: trans_feature_engineering_1
+    - name: user_tenure_days
+      origin: trans_feature_engineering_1
+  models:
+    - name: model
+      task: unknown
+      algorithm_family: LogisticRegression
+      inputs:
+        - user_activity_7d
+        - user_tenure_days
+      description: trained via .fit() call
+  metrics:
