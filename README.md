@@ -1,41 +1,21 @@
-# NDEL - Non-Deterministic Expression Language
+# NDEL - Narrative Descriptive Expression Language
 
-NDEL is a revolutionary expression language that combines deterministic structure with non-deterministic value resolution, enabling natural language-like queries that are interpreted into precise computational expressions.
+NDEL is a descriptive DSL that restates the intent of existing Python and SQL used in data science and machine learning. The implementation code remains the source of truth; NDEL provides a higher-level, human-readable, and shareable explanation of what that code does, especially when the original cannot be shown publicly.
 
-## Key Features
+## What is NDEL?
 
-- **Mixed Deterministic/Non-Deterministic Expressions**: Write `age < "young"` and let the system interpret "young" based on context
-- **Confidence Scoring**: Every interpretation has an associated confidence score
-- **Domain Adaptable**: Same expression means different things in different domains
-- **Learning Capable**: Improves interpretations based on usage and feedback
-- **CEL-Inspired**: Built on solid foundations from Google's Common Expression Language
+NDEL captures the semantics of DS/ML pipelines and analytics queries in concise prose. It mirrors the behavior of underlying Python and SQL so stakeholders can understand the logic, assumptions, and flow without seeing the private implementation.
 
-## Quick Example
-```ndel
-// Soccer domain
-where player is "promising young striker" 
-  and performance shows "improving trend"
-  and salary is "reasonable"
+## Use Cases
 
-// Resolves to:
-where (age < 23 AND position IN ['ST', 'CF'] AND potential_rating > 0.75)
-  and (form_last_5 > form_previous_5)  
-  and (salary < team_average * 0.8)
-```
+- Documenting DS/ML pipelines built in Python notebooks or scripts
+- Describing SQL analytics queries for business stakeholders
+- Generating public-facing docs from private or sensitive codebases
 
-## Repository Structure
+## How it works (conceptual)
 
-- `doc/` - Language specifications and documentation
-- `grammar/` - Formal grammar definition (ANTLR4)
-- `proto/` - Protocol buffer definitions
-- `conformance/` - Test suite
-- `examples/` - Example NDEL programs
-- `reference/` - Reference implementation
+Implementation code → parsed → NDEL semantic model → rendered as NDEL text. The generated description traces back to the real code, ensuring accuracy while remaining readable and shareable.
 
 ## Status
 
-⚠️ **UNDER ACTIVE DEVELOPMENT** - This is a language specification in progress.
-
-## License
-
-Apache 2.0 (same as CEL)
+Early and experimental. Expect rapid iteration and changes.
