@@ -6,6 +6,8 @@ NDEL is a post-facto descriptive DSL for data science and machine learning code.
 
 > NDEL is the semantic layer between raw DS/ML code and LLM reasoning. It provides structure, privacy filters, and a DSL schema; the LLM provides the language and narrative.
 
+NDEL is LLM-agnostic: you must supply your own LLM callback. NDEL never calls providers or owns API keys. Deterministic rendering (`render_pipeline`) is a fallback; the intended flow is structure → LLM → NDEL text.
+
 ## Purpose & High-Level Design
 - Describe existing DS/ML pipelines without running code.
 - Bridge Python and SQL into a unified, human-readable lineage.

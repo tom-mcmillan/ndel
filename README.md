@@ -76,3 +76,33 @@ NDEL is a semantic protocol, not a deterministic compiler. The library extracts 
 - LLMs need structure to avoid hallucinations and lineage mistakes; NDEL provides it.
 - It is an explanation layer, not an execution layer—focused on meaning, documentation, audits, and cross-team communication.
 - Privacy is preserved by redaction and aliases; you can externalize semantics without leaking secrets.
+
+## NDEL and LLMs
+
+- NDEL provides structure (Pipeline + DSL) and constraints; an external LLM writes the NDEL description.
+- NDEL never owns API keys or calls LLM providers. You supply a callback.
+- Deterministic `render_pipeline` is a fallback/debug tool; primary text generation should use `*_with_llm` APIs.
+
+Example (pseudo-LLM callback):
+
+```python
+from ndel import (
+    describe_callable_with_llm,
+    NdelConfig,
+    PrivacyConfig,
+    DomainConfig,
+)
+from my_project.pipelines import train_model
+
+def my_llm_generate(prompt: str) -> str:
+    # Call your LLM provider here and return response text
+    return "pipeline \"example\":\n  # LLM text"
+
+config = NdelConfig(
+    privacy=PrivacyConfig(hide_table_names=True),
+    domain=DomainConfig(pipeline_name="subscription_churn_pipeline"),
+)
+
+ndel_text = describe_callable_with_llm(train_model, llm_generate=my_llm_generate, config=config)
+print(ndel_text)
+```

@@ -9,6 +9,8 @@ NDEL separates three concerns:
 
 Think of NDEL as the missing semantic layer between raw DS/ML code and LLM reasoning. You hand an LLM a pipeline graph, privacy-filtered and domain-shaped, plus a DSL schema. The LLM then writes the NDEL description within that envelope—different LLMs may phrase things differently, and that is expected.
 
+NDEL is provider-agnostic: you bring the LLM client. NDEL never invokes remote APIs on its own. Deterministic rendering exists for debugging; the primary path is through a user-supplied LLM.
+
 ## Why non-determinism?
 - **Flexibility**: Different teams and domains can adopt their own dialects and phrasings.
 - **Domain adaptation**: LLMs can reinterpret the same structure with domain-specific nuance.

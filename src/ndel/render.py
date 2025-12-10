@@ -45,7 +45,14 @@ def _apply_privacy(value: str, config: NdelConfig | None) -> str:
 
 
 def render_pipeline(pipeline: Pipeline, config: NdelConfig | None = None) -> str:
-    """Render a Pipeline into human-readable NDEL text."""
+    """
+    Deterministic renderer for NDEL text.
+
+    Useful for debugging, tests, and environments without an LLM. In LLM-centric
+    setups, prefer `render_pipeline_with_llm` (via ndel.llm_renderer) or the
+    `describe_*_with_llm` APIs in ndel.api, which delegate textual authoring to a
+    user-supplied LLM callback.
+    """
 
     def indent(level: int) -> str:
         return "  " * level
