@@ -1,20 +1,24 @@
 # NDEL - Narrative Descriptive Expression Language
 
-NDEL is a descriptive DSL that restates the intent of existing Python and SQL used in data science and machine learning. It is used post-facto inside DS/ML projects: you import the library and it describes your existing code without executing it or generating new code. The implementation remains the source of truth; NDEL provides a higher-level, human-readable, and shareable explanation of what that code does, especially when the original cannot be shown publicly.
+NDEL is a **post-facto descriptive DSL** for data science and machine learning. It statically analyzes existing Python and SQL (no execution, no code generation) to produce human-readable descriptions that connect datasets, transformations, features, models, and metrics.
 
-## What is NDEL?
+## Conceptual Overview
 
-NDEL captures the semantics of DS/ML pipelines and analytics queries in concise prose. It mirrors the behavior of underlying Python and SQL so stakeholders can understand the logic, assumptions, and flow without seeing the private implementation.
+- **Library-first**: import and call APIs; there is no CLI. Main entry points: `describe_python_source`, `describe_sql_source`, `describe_callable`, `describe_sql_and_python`, plus helpers for diffs (`describe_pipeline_diff`) and config validation (`validate_config`).
+- **Semantic model**: Pipelines contain datasets (with sources), ordered transformations (filter, aggregation, join, feature_engineering, other), features (with origins), models (with inputs/metadata), and metrics (with higher-is-better hints).
+- **Config & privacy**: `NdelConfig` bundles `PrivacyConfig` (hide table names/paths, redact identifiers, truncate literals), `DomainConfig` (aliases and pipeline name), and `AbstractionLevel` (HIGH/MEDIUM/LOW). Validation surfaces unknown aliases and privacy/abstraction hints.
+- **Analyzers**: Python analyzer detects pandas IO, filters, assignments, groupbys/aggregations, merges/concats, chained ops, sklearn Pipelines/ColumnTransformers, preprocessing, features in model training, and common metrics. SQL analyzer parses FROM/JOIN/WHERE/GROUP BY/SELECT-derived columns into datasets, transformations, and derived features. Lineage merge aligns SQL-produced datasets with Python pipelines via dataset sources.
+- **Rendering & provenance**: `render_pipeline` outputs an indented, privacy-aware DSL with lineage (inputs/outputs/origins). Abstraction controls detail level. Privacy redaction avoids leaking sensitive names.
+- **Diffs & CI checks**: `diff_pipelines`/`describe_pipeline_diff` summarize added/removed datasets, transformations, features, models, metrics. Validation returns issues instead of raising, suitable for CI.
 
 ## Use Cases
 
-- Documenting DS/ML pipelines built in Python notebooks or scripts
-- Describing SQL analytics queries for business stakeholders
-- Generating public-facing docs from private or sensitive codebases
+- Document DS/ML pipelines in notebooks or scripts.
+- Describe SQL analytics queries for stakeholders.
+- Publish shareable docs from private codebases.
+- Track semantic diffs across versions and validate configs in CI.
 
 ## Quick Start (Library Usage)
-
-Import NDEL in your Python project; there is no CLI. Example:
 
 ```python
 from ndel import (
@@ -43,20 +47,11 @@ ndel_text = describe_callable(train_churn_model, config=config)
 print(ndel_text)
 ```
 
-Config is optional when experimenting; you can start with `describe_python_source` or `describe_callable` alone. A project-specific config file (e.g., `ndel_profile.py`) can be added and versioned later.
+Config is optional when experimenting; start with `describe_python_source` or `describe_callable` alone. A project-specific `ndel_profile.py` can be generated and versioned later.
 
-## Configuration & Domain Adaptation
+## How it Works (Conceptual)
 
-`NdelConfig` bundles:
-- `PrivacyConfig` for hiding sensitive details (table names, file paths, redaction keywords, literal length limits).
-- `DomainConfig` for mapping code-level names to human-friendly aliases and setting a pipeline name.
-- `AbstractionLevel` to control how detailed descriptions should be (high/medium/low).
-
-In many projects, you’ll want a tailored `NdelConfig` that understands your datasets, models, and privacy requirements. We recommend generating an initial `ndel_profile.py` with an LLM that can see your codebase, then reviewing and versioning it like any other code. A bootstrap prompt for this will be provided separately.
-
-## How it works (conceptual)
-
-Implementation code → parsed → NDEL semantic model → rendered as NDEL text. The generated description traces back to the real code, ensuring accuracy while remaining readable and shareable.
+Implementation code → parsed (Python/SQL) → semantic model (datasets, transformations, features, models, metrics, lineage) → rendered NDEL text with privacy/abstraction applied. SQL and Python pipelines can be merged for unified lineage (SQL → Python → model).
 
 ## Status
 
