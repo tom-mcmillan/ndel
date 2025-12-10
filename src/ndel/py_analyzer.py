@@ -22,6 +22,7 @@ class PythonAnalyzer(ast.NodeVisitor):
 
         self.datasets: Dict[str, Dataset] = {}
         self.models: Dict[str, Model] = {}
+        self.transformations: list[Transformation] = []
 
     def analyze(self) -> Pipeline:
         self.visit(self.tree)
@@ -46,7 +47,7 @@ class PythonAnalyzer(ast.NodeVisitor):
         return Pipeline(
             name=pipeline_name,
             datasets=datasets,
-            transformations=[],
+            transformations=self.transformations,
             features=[],
             models=models,
             metrics=[],
@@ -55,6 +56,7 @@ class PythonAnalyzer(ast.NodeVisitor):
 
     def visit_Assign(self, node: ast.Assign) -> None:  # type: ignore[override]
         if not isinstance(node.value, ast.Call):
+            self._maybe_record_transformation(node)
             return
 
         func = node.value.func
@@ -88,6 +90,9 @@ class PythonAnalyzer(ast.NodeVisitor):
                 description=None,
                 hyperparameters=None,
             )
+            return
+
+        self._maybe_record_transformation(node)
 
     def visit_Call(self, node: ast.Call) -> None:  # type: ignore[override]
         func = node.func
@@ -99,6 +104,111 @@ class PythonAnalyzer(ast.NodeVisitor):
                     model.description = "trained via .fit() call"
 
         self.generic_visit(node)
+
+    def _maybe_record_transformation(self, node: ast.Assign) -> None:
+        """Detect simple pandas transformations from assignment patterns."""
+
+        if not node.targets:
+            return
+
+        target = node.targets[0]
+
+        # Filtering: df = df[df["x"] > 0]
+        if isinstance(target, ast.Name) and isinstance(node.value, ast.Subscript):
+            if isinstance(node.value.value, ast.Name):
+                base_name = node.value.value.id
+                if base_name == target.id:
+                    self.transformations.append(
+                        Transformation(
+                            name=f"filter_{target.id}",
+                            description=f"filter rows in {target.id}",
+                            kind="filter",
+                            inputs=[base_name],
+                            outputs=[target.id],
+                        )
+                    )
+                    return
+
+        # New column assignment: df["col"] = ...
+        if isinstance(target, ast.Subscript) and isinstance(target.value, ast.Name):
+            dataset_name = target.value.id
+            col_name = self._extract_subscript_key(target)
+            output = col_name if col_name else dataset_name
+            self.transformations.append(
+                Transformation(
+                    name=f"add_col_{output}",
+                    description=f"add or update column {output}",
+                    kind="feature_engineering",
+                    inputs=[dataset_name],
+                    outputs=[output],
+                )
+            )
+            return
+
+        # Aggregation: df = df.groupby(...).agg(...)
+        if isinstance(target, ast.Name) and isinstance(node.value, ast.Call):
+            call = node.value
+            if isinstance(call.func, ast.Attribute) and call.func.attr in {"agg", "aggregate"}:
+                base = call.func.value
+                dataset_name = self._base_name_from_groupby(base)
+                if dataset_name:
+                    self.transformations.append(
+                        Transformation(
+                            name=f"aggregate_{target.id}",
+                            description=f"aggregate {dataset_name}",
+                            kind="aggregation",
+                            inputs=[dataset_name],
+                            outputs=[target.id],
+                        )
+                    )
+                    return
+
+            # Join/Merge: df = df.merge(...)
+            if isinstance(call.func, ast.Attribute) and call.func.attr == "merge":
+                base = call.func.value
+                if isinstance(base, ast.Name):
+                    other = None
+                    if call.args:
+                        first_arg = call.args[0]
+                        other = self._name_from_node(first_arg)
+                    self.transformations.append(
+                        Transformation(
+                            name=f"merge_{target.id}",
+                            description=f"merge {base.id} with {other or 'other'}",
+                            kind="join",
+                            inputs=[n for n in [base.id, other] if n],
+                            outputs=[target.id],
+                        )
+                    )
+                    return
+
+    def _extract_subscript_key(self, node: ast.Subscript) -> str | None:
+        """Get the string key from a subscript like df["col"]."""
+
+        key = node.slice
+        if isinstance(key, ast.Constant) and isinstance(key.value, str):
+            return key.value
+        if isinstance(key, ast.Index):  # type: ignore[attr-defined]
+            inner = key.value  # type: ignore[assignment]
+            if isinstance(inner, ast.Constant) and isinstance(inner.value, str):
+                return inner.value
+        return None
+
+    def _base_name_from_groupby(self, node: ast.AST) -> str | None:
+        """Extract dataset name from a groupby chain."""
+
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "groupby":
+            if isinstance(node.func.value, ast.Name):
+                return node.func.value.id
+        if isinstance(node, ast.Attribute) and node.attr == "groupby":
+            if isinstance(node.value, ast.Name):
+                return node.value.id
+        return None
+
+    def _name_from_node(self, node: ast.AST) -> str | None:
+        if isinstance(node, ast.Name):
+            return node.id
+        return None
 
 
 def analyze_python_source(source: str, config: NdelConfig | None = None) -> Pipeline:
