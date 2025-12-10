@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from ndel.config import NdelConfig
+from ndel.config import AbstractionLevel, NdelConfig
 from .semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
 
 
@@ -52,6 +52,8 @@ def render_pipeline(pipeline: Pipeline, config: NdelConfig | None = None) -> str
 
     def sanitize(text: str) -> str:
         return _apply_privacy(text, config)
+
+    abstraction = config.abstraction if config else AbstractionLevel.MEDIUM
 
     pipeline_name_raw = config.domain.pipeline_name if config and config.domain else pipeline.name
     pipeline_name = sanitize(pipeline_name_raw)
@@ -133,8 +135,20 @@ def render_pipeline(pipeline: Pipeline, config: NdelConfig | None = None) -> str
             renderer(item, level=2)
 
     add_section("datasets", pipeline.datasets, render_dataset)
-    add_section("transformations", pipeline.transformations, render_transformation)
-    add_section("features", pipeline.features, render_feature)
+
+    if abstraction in {AbstractionLevel.MEDIUM, AbstractionLevel.LOW}:
+        add_section("transformations", pipeline.transformations, render_transformation)
+
+    if abstraction == AbstractionLevel.LOW:
+        feature_list = pipeline.features
+    elif abstraction == AbstractionLevel.MEDIUM:
+        feature_list = [f for f in pipeline.features if f.description and "training" in f.description.lower()]
+    else:
+        feature_list = []
+
+    if abstraction != AbstractionLevel.HIGH:
+        add_section("features", feature_list, render_feature)
+
     add_section("models", pipeline.models, render_model)
     add_section("metrics", pipeline.metrics, render_metric)
 
