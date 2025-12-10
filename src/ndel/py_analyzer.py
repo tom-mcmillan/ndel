@@ -7,6 +7,24 @@ from ndel.config import DomainConfig, NdelConfig, PrivacyConfig
 from ndel.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
 
 
+class AnalysisContext:
+    """Shared mutable context passed to custom detectors."""
+
+    def __init__(
+        self,
+        datasets: Dict[str, Dataset],
+        models: Dict[str, Model],
+        transformations: list[Transformation],
+        features: Dict[str, Feature],
+        config: NdelConfig | None,
+    ) -> None:
+        self.datasets = datasets
+        self.models = models
+        self.transformations = transformations
+        self.features = features
+        self.config = config
+
+
 class PythonAnalyzer(ast.NodeVisitor):
     """Static analyzer to build a Pipeline from Python source.
 
@@ -15,15 +33,34 @@ class PythonAnalyzer(ast.NodeVisitor):
     and metric calculation with privacy-aware handling.
     """
 
-    def __init__(self, source: str, config: NdelConfig | None = None) -> None:
+    def __init__(
+        self,
+        source: str,
+        config: NdelConfig | None = None,
+        custom_detectors: list[callable] | None = None,
+    ) -> None:
         self.source = source
         self.tree = ast.parse(source)
         self.config = config
+        self.custom_detectors = custom_detectors or []
 
         self.datasets: Dict[str, Dataset] = {}
         self.models: Dict[str, Model] = {}
         self.features: Dict[str, Feature] = {}
         self.transformations: list[Transformation] = []
+
+        self.context = AnalysisContext(
+            datasets=self.datasets,
+            models=self.models,
+            transformations=self.transformations,
+            features=self.features,
+            config=self.config,
+        )
+
+    def visit(self, node: ast.AST):  # type: ignore[override]
+        for detector in self.custom_detectors:
+            detector(self.context, node)
+        return super().visit(node)
 
     def analyze(self) -> Pipeline:
         self.visit(self.tree)
@@ -259,10 +296,14 @@ class PythonAnalyzer(ast.NodeVisitor):
         return cols
 
 
-def analyze_python_source(source: str, config: NdelConfig | None = None) -> Pipeline:
+def analyze_python_source(
+    source: str,
+    config: NdelConfig | None = None,
+    custom_detectors: list[callable] | None = None,
+) -> Pipeline:
     """Analyze Python source into an NDEL Pipeline (early prototype)."""
 
-    analyzer = PythonAnalyzer(source, config=config)
+    analyzer = PythonAnalyzer(source, config=config, custom_detectors=custom_detectors)
     return analyzer.analyze()
 
 
