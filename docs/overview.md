@@ -1,6 +1,8 @@
 # NDEL Overview
 
-NDEL is a post-facto descriptive DSL for data science and machine learning code. It statically analyzes existing Python and SQL (no execution, no code generation) to produce human-readable descriptions that connect datasets, transformations, features, models, and metrics.
+NDEL is a post-facto descriptive DSL for data science and machine learning code. It statically analyzes existing Python and SQL (no execution, no code generation) to produce structured signals, and an LLM turns those signals into human-readable descriptions that connect datasets, transformations, features, models, and metrics. Outputs are intentionally non-deterministic: better LLMs and better prompts yield richer descriptions over time.
+
+> NDEL is the semantic layer between raw DS/ML code and LLM reasoning. It provides structure, privacy filters, and a DSL schema; the LLM provides the language and narrative.
 
 ## Purpose & High-Level Design
 - Describe existing DS/ML pipelines without running code.
@@ -65,6 +67,10 @@ pipeline "churn_prediction_pipeline":
 - **Python analyzer** (AST-based): detects pandas IO, filters, assignments, groupbys/aggregations, merges/concats, chained ops, sklearn Pipelines/ColumnTransformers, preprocessing, features used in model training, common metrics from `sklearn.metrics`. Tracks provenance to link transformations, features, and model inputs.
 - **SQL analyzer**: heuristic parsing of FROM/JOIN/WHERE/GROUP BY/SELECT-derived columns into datasets (with sources), transformations (joins, filters, aggregations, projections), and derived features.
 - **Lineage merge**: `merge_pipelines` aligns SQL-produced datasets with Python pipelines via dataset sources for unified lineage (SQL → Python → model).
+
+NDEL is not deterministic: analyzers produce structured inputs for the DSL, and the LLM transforms them into contextual, human-readable text. As LLMs improve, NDEL descriptions improve automatically without changing the code.
+
+Key perspective: NDEL bounds interpretation (structure, DSL, privacy, aliases) while embracing variation in phrasing. LLMs remain free to describe pipelines differently as long as they stay faithful to the pipeline graph.
 
 ## Rendering
 - `render_pipeline` produces an indented DSL.

@@ -5,31 +5,26 @@ import textwrap
 from collections.abc import Callable
 
 from ndel.config import NdelConfig
-from ndel.py_analyzer import analyze_python_source
-from ndel.sql_analyzer import analyze_sql_source
-from ndel.render import render_pipeline
-from ndel.lineage import merge_pipelines
 from ndel.diff import diff_pipelines
+from ndel.llm_renderer import LLMGenerate, render_pipeline_with_llm
+from ndel.lineage import merge_pipelines
+from ndel.py_analyzer import analyze_python_source
+from ndel.render import render_pipeline
+from ndel.serialization import pipeline_to_dict, pipeline_to_json
+from ndel.sql_analyzer import analyze_sql_source
 from ndel.validation import ValidationIssue, validate_config_against_pipeline
+from ndel.semantic_model import Pipeline
 
 
 def describe_python_source(source: str, config: NdelConfig | None = None) -> str:
-    """Analyze Python DS/ML code into NDEL text.
-
-    This is static: code is not executed. The optional config can influence
-    naming (aliases) and, in the future, privacy and abstraction behavior.
-    """
+    """Analyze Python DS/ML code and render deterministic NDEL text (fallback path)."""
 
     pipeline = analyze_python_source(source, config=config)
     return render_pipeline(pipeline, config=config)
 
 
 def describe_callable(func: Callable, config: NdelConfig | None = None) -> str:
-    """Analyze a callable's source code and render NDEL text.
-
-    Uses inspect.getsource under the hood. Raises RuntimeError if the source
-    cannot be retrieved (e.g. built-in or dynamically generated).
-    """
+    """Analyze a callable's source code and render deterministic NDEL text (fallback)."""
 
     try:
         source = inspect.getsource(func)
@@ -40,7 +35,7 @@ def describe_callable(func: Callable, config: NdelConfig | None = None) -> str:
 
 
 def describe_sql_source(sql: str, config: NdelConfig | None = None) -> str:
-    """Analyze SQL text and render an NDEL pipeline description."""
+    """Analyze SQL text and render a deterministic NDEL pipeline description (fallback)."""
 
     pipeline = analyze_sql_source(sql, config=config)
     return render_pipeline(pipeline, config=config)
@@ -93,3 +88,72 @@ def describe_pipeline_diff(old: Pipeline, new: Pipeline) -> str:
 
 
 __all__.append("describe_pipeline_diff")
+
+
+# Serialization helpers
+__all__.append("pipeline_to_dict")
+__all__.append("pipeline_to_json")
+
+
+def describe_python_source_with_llm(
+    source: str,
+    llm_generate: LLMGenerate,
+    config: NdelConfig | None = None,
+) -> str:
+    """
+    Analyze Python DS/ML source code into a Pipeline and render it via an external LLM.
+
+    The caller MUST provide an LLM callback (llm_generate) that takes a prompt string
+    and returns an NDEL text response. NDEL does not call any LLM APIs on its own.
+    """
+
+    pipeline = analyze_python_source(source, config=config)
+    return render_pipeline_with_llm(pipeline, llm_generate=llm_generate, config=config)
+
+
+def describe_callable_with_llm(
+    func: Callable,
+    llm_generate: LLMGenerate,
+    config: NdelConfig | None = None,
+) -> str:
+    """Analyze the source of a Python callable and render it via an external LLM."""
+
+    try:
+        source = inspect.getsource(func)
+    except OSError as exc:  # pragma: no cover - depends on environment
+        raise RuntimeError(f"Could not retrieve source for {func!r}") from exc
+
+    return describe_python_source_with_llm(textwrap.dedent(source), llm_generate=llm_generate, config=config)
+
+
+def describe_sql_source_with_llm(
+    sql: str,
+    llm_generate: LLMGenerate,
+    config: NdelConfig | None = None,
+) -> str:
+    """Analyze SQL text into a Pipeline and render it via an external LLM."""
+
+    pipeline = analyze_sql_source(sql, config=config)
+    return render_pipeline_with_llm(pipeline, llm_generate=llm_generate, config=config)
+
+
+def describe_sql_and_python_with_llm(
+    sql: str,
+    py_source: str,
+    llm_generate: LLMGenerate,
+    config: NdelConfig | None = None,
+) -> str:
+    """Analyze both SQL and Python pipelines, merge them, and render via an external LLM."""
+
+    sql_pipeline = analyze_sql_source(sql, config=config)
+    py_pipeline = analyze_python_source(py_source, config=config)
+    merged = merge_pipelines(sql_pipeline, py_pipeline)
+    return render_pipeline_with_llm(merged, llm_generate=llm_generate, config=config)
+
+
+__all__ += [
+    "describe_python_source_with_llm",
+    "describe_callable_with_llm",
+    "describe_sql_source_with_llm",
+    "describe_sql_and_python_with_llm",
+]

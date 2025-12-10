@@ -57,6 +57,7 @@ Implementation code → parsed (Python/SQL) → semantic model (datasets, transf
 
 - [Architecture Overview](docs/overview.md)
 - [Bootstrap Config Prompt](docs/bootstrap_ndel_config_prompt.md)
+- [NDEL Philosophy](docs/philosophy.md)
 - [Cookbook: Churn-Style Pipeline](docs/cookbook_churn_pipeline.md)
 - [Cookbook: CI Integration](docs/cookbook_ci_integration.md)
 - [Cookbook: Custom Feature Store Detector](docs/cookbook_custom_feature_store_detector.md)
@@ -64,3 +65,14 @@ Implementation code → parsed (Python/SQL) → semantic model (datasets, transf
 ## Status
 
 Early and experimental. Expect rapid iteration and changes.
+
+## NDEL Philosophy: Non-Deterministic Semantics
+
+NDEL is a semantic protocol, not a deterministic compiler. The library extracts structural signals from code—datasets, transformations, features, models, metrics—but an LLM ultimately interprets and phrases the NDEL descriptions. Each repo can adopt its own semantic dialect via LLM-generated config, and phrasing may evolve as LLM capabilities improve. Treat NDEL as a linguistic lens over your pipelines, not as a strict AST-to-DSL translator.
+
+**What we are building:** a semantic interface for LLMs to understand DS/ML pipelines. NDEL turns messy Python/SQL/notebooks into a structured Pipeline graph plus a DSL schema. The LLM (user-supplied) writes the final NDEL text non-deterministically within that schema. The goal is controlled semantic generation: structure + privacy + domain hints from NDEL; language and narrative from the LLM.
+
+**Why it matters:**
+- LLMs need structure to avoid hallucinations and lineage mistakes; NDEL provides it.
+- It is an explanation layer, not an execution layer—focused on meaning, documentation, audits, and cross-team communication.
+- Privacy is preserved by redaction and aliases; you can externalize semantics without leaking secrets.

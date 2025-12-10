@@ -2,6 +2,10 @@
 
 This document contains a **ready-to-use prompt** you can paste into an LLM (such as GPT-5.1 / GPT-5.1-codex) that has access to *your* data science / ML codebase.
 
+The generated config is non-deterministic and project-specific: each codebase gets its own semantic dialect. Always review and version-control the output, since phrasing and interpretations may evolve as LLMs improve or prompts change.
+
+Remember: the LLM writes NDEL within your project’s semantic envelope. NDEL supplies structure and privacy; the LLM provides language. Configs capture that dialect and may shift as models or prompts evolve.
+
 The model will:
 
 - Inspect your repository statically,
