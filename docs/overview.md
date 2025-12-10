@@ -1,5 +1,7 @@
 # NDEL Overview
 
+NDEL stands for Non-Deterministic Expression Language.
+
 NDEL is a post-facto descriptive DSL for data science and machine learning code. It statically analyzes existing Python and SQL (no execution, no code generation) to produce structured signals, and an LLM turns those signals into human-readable descriptions that connect datasets, transformations, features, models, and metrics. Outputs are intentionally non-deterministic: better LLMs and better prompts yield richer descriptions over time.
 
 > NDEL is the semantic layer between raw DS/ML code and LLM reasoning. It provides structure, privacy filters, and a DSL schema; the LLM provides the language and narrative.

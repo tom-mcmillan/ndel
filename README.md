@@ -1,4 +1,4 @@
-# NDEL - Narrative Descriptive Expression Language
+# NDEL - Non-Deterministic Expression Language
 
 NDEL is a **post-facto descriptive DSL** for data science and machine learning. It statically analyzes existing Python and SQL (no execution, no code generation) to produce human-readable descriptions that connect datasets, transformations, features, models, and metrics.
 

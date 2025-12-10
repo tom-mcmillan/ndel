@@ -1,5 +1,7 @@
 # NDEL Philosophy: A Non-Deterministic Semantic Protocol
 
+NDEL stands for Non-Deterministic Expression Language.
+
 NDEL separates three concerns:
 - **Static signals (library)**: Extract structural hints from Python and SQL—datasets, transformations, features, models, metrics—and build a semantic model with lineage.
 - **Semantic interpretation (LLM)**: An LLM phrases and contextualizes those signals into NDEL text. The wording is non-deterministic and improves as LLMs improve.
