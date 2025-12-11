@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple
 
 from src.config import DomainConfig, NdelConfig, PrivacyConfig
 from src.model import Dataset, Feature, Metric, Model, Pipeline, Transformation
+from src.language import PRIMITIVES
 
 
 class AnalysisContext:
@@ -331,7 +332,7 @@ class PythonAnalyzer(ast.NodeVisitor):
         transformation = Transformation(
             name=name,
             description=description,
-            kind=kind,
+            kind=kind if kind in PRIMITIVES["transformation_kinds"] else "other",
             inputs=trans_inputs,
             outputs=trans_outputs,
         )

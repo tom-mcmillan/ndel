@@ -1,16 +1,14 @@
-"""Lightweight NDEL grammar description and validator.
-
-This is intentionally small: it encodes the structural rules that the
-deterministic renderer produces (indentation-based sections, known section
-names, list items with "-"), and surfaces warnings when a text payload drifts
-from the expected shape. It is not a full parser but acts as a guardrail for
-MCP inputs and tests.
-"""
-
 from __future__ import annotations
 
 import re
-from typing import List
+from typing import Any, Dict, List
+
+
+PRIMITIVES = {
+    "sections": ["datasets", "transformations", "features", "models", "metrics"],
+    "transformation_kinds": ["filter", "aggregation", "join", "feature_engineering", "other"],
+    "source_types": ["table", "view", "file", "feature_store", "other"],
+}
 
 
 NDEL_GRAMMAR = r"""
@@ -53,15 +51,13 @@ pipeline "<name>":
 """.strip()
 
 
-KNOWN_SECTIONS = {"datasets", "transformations", "features", "models", "metrics"}
+def describe_grammar() -> str:
+    return NDEL_GRAMMAR
 
 
 def validate_ndel_text(ndel_text: str) -> List[str]:
-    """Return a list of warnings if the NDEL text does not match expected shape."""
-
     warnings: List[str] = []
     lines = [ln.rstrip("\n") for ln in ndel_text.splitlines() if ln.strip()]
-
     if not lines:
         return ["empty NDEL text"]
 
@@ -80,7 +76,7 @@ def validate_ndel_text(ndel_text: str) -> List[str]:
         m = section_pattern.match(line)
         if m:
             section = m.group(1)
-            if section not in KNOWN_SECTIONS and section != "pipeline":
+            if section not in PRIMITIVES["sections"] and section != "pipeline":
                 warnings.append(f"unknown section '{section}'")
 
     bullet_pattern = re.compile(r"^\s{4}- ")
@@ -91,10 +87,4 @@ def validate_ndel_text(ndel_text: str) -> List[str]:
     return warnings
 
 
-def describe_grammar() -> str:
-    """Return the human-readable grammar string."""
-
-    return NDEL_GRAMMAR
-
-
-__all__ = ["NDEL_GRAMMAR", "validate_ndel_text", "describe_grammar"]
+__all__ = ["PRIMITIVES", "NDEL_GRAMMAR", "describe_grammar", "validate_ndel_text"]

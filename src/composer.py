@@ -4,8 +4,8 @@ import re
 from typing import Any
 
 from src.config import AbstractionLevel, NdelConfig
-from src.types import Dataset, Feature, Metric, Model, Pipeline, Transformation
-from src.grammar import validate_ndel_text
+from src.model import Dataset, Feature, Metric, Model, Pipeline, Transformation
+from src.language import validate_ndel_text
 
 
 def _apply_privacy(value: str, config: NdelConfig | None) -> str:

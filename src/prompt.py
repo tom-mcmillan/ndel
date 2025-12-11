@@ -13,9 +13,13 @@ You receive a pipeline JSON with datasets, transformations, features, models, an
 - Preserve structure and lineage; do not invent entities.
 - Output indentation-based NDEL text (sections like pipeline, datasets, transformations, features, models, metrics).
 - Privacy/abstraction may already be applied; do not re-infer sensitive details.
+- Follow the NDEL grammar and allowed sections/kinds provided below.
 
 Pipeline JSON (ground truth):
 {pipeline_json}
+
+Grammar and rules:
+{ndel_grammar}
 
 Write the NDEL description now, using only the provided structure."""
 

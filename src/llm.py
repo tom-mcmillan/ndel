@@ -4,6 +4,7 @@ import json
 from typing import Any, Callable, Dict
 
 from src.config import NdelConfig
+from src.language import NDEL_GRAMMAR
 from src.model import Pipeline, pipeline_to_dict
 from src.prompt import DEFAULT_NDEL_PROMPT
 
@@ -30,7 +31,7 @@ def build_ndel_prompt(
     data: Dict[str, Any] = pipeline_to_dict(pipeline)
     pipeline_json = json.dumps(data, indent=2, sort_keys=True)
 
-    base = DEFAULT_NDEL_PROMPT.format(pipeline_json=pipeline_json)
+    base = DEFAULT_NDEL_PROMPT.format(pipeline_json=pipeline_json, ndel_grammar=NDEL_GRAMMAR)
     prompt_parts: list[str] = [base]
     if extra_instructions:
         prompt_parts.append(extra_instructions.strip())
