@@ -3,8 +3,8 @@ from __future__ import annotations
 import ast
 from typing import Dict, List, Tuple
 
-from ndel.config import DomainConfig, NdelConfig, PrivacyConfig
-from ndel.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
+from ndel.config.core import DomainConfig, NdelConfig, PrivacyConfig
+from ndel.pipeline.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
 
 
 class AnalysisContext:

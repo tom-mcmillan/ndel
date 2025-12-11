@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ndel.semantic_model import Pipeline
+from ndel.pipeline.semantic_model import Pipeline
 
 
 def merge_pipelines(p_sql: Pipeline, p_py: Pipeline) -> Pipeline:

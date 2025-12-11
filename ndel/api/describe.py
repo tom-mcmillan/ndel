@@ -4,16 +4,16 @@ import inspect
 import textwrap
 from collections.abc import Callable
 
-from ndel.config import NdelConfig
-from ndel.diff import diff_pipelines
-from ndel.llm_renderer import LLMGenerate, render_pipeline_with_llm
-from ndel.lineage import merge_pipelines
-from ndel.py_analyzer import analyze_python_source
-from ndel.render import render_pipeline
-from ndel.serialization import pipeline_to_dict, pipeline_to_json
-from ndel.sql_analyzer import analyze_sql_source
-from ndel.validation import ValidationIssue, validate_config_against_pipeline
-from ndel.semantic_model import Pipeline
+from ndel.config.core import NdelConfig
+from ndel.pipeline.diff import diff_pipelines
+from ndel.rendering.llm_renderer import LLMGenerate, render_pipeline_with_llm
+from ndel.pipeline.lineage import merge_pipelines
+from ndel.analyzers.python_analyzer import analyze_python_source
+from ndel.rendering.render import render_pipeline
+from ndel.pipeline.serialization import pipeline_to_dict, pipeline_to_json
+from ndel.analyzers.sql_analyzer import analyze_sql_source
+from ndel.pipeline.validation import ValidationIssue, validate_config_against_pipeline
+from ndel.pipeline.semantic_model import Pipeline
 
 
 def describe_python_source(source: str, config: NdelConfig | None = None) -> str:

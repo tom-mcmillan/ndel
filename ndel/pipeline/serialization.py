@@ -4,7 +4,7 @@ import json
 from dataclasses import asdict, is_dataclass
 from typing import Any, Dict
 
-from ndel.semantic_model import Pipeline
+from ndel.pipeline.semantic_model import Pipeline
 
 
 def _dataclass_to_dict(obj: Any) -> Any:

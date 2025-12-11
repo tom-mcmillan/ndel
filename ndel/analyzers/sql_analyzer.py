@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 from typing import List
 
-from ndel.config import NdelConfig
-from ndel.semantic_model import Dataset, Feature, Pipeline, Transformation
+from ndel.config.core import NdelConfig
+from ndel.pipeline.semantic_model import Dataset, Feature, Pipeline, Transformation
 
 
 def analyze_sql_source(sql: str, config: NdelConfig | None = None) -> Pipeline:
