@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ndel-mcp = "ndel.mcp_server:main"
+ndel-mcp = "src.mcp.server:main"
 
 
 [project.optional-dependencies]
@@ -45,7 +45,7 @@ Documentation = "https://github.com/yourusername/ndel#readme"
 Repository = "https://github.com/yourusername/ndel"
 
 [tool.hatch.build.targets.wheel]
-packages = ["ndel"]
+packages = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

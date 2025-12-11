@@ -78,7 +78,7 @@ NDEL can compare pipelines, enforce privacy rules, and export JSON representatio
 
 NDEL follows a clean, layered design:
 
-ndel/
+src/
   analyzers/     Python and SQL static analysis  
   pipeline/      Semantic IR (datasets, lineage, transforms, diff, validation)  
   rendering/     Deterministic and LLM rendering  
