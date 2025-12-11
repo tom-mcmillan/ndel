@@ -113,9 +113,12 @@ Legacy tests and examples have been removed while the new IR, config system, ana
 
 ## Running Locally
 
-- Install: `pip install -e .[dev]` (includes `sqlglot` for full SQL parsing; a regex fallback is used if it’s missing)
+- Recommended install:
+  - Create venv: `python3 -m venv .venv && source .venv/bin/activate`
+  - Upgrade pip: `python -m pip install --upgrade pip`
+  - Install: `python -m pip install -e '.[dev]'` (includes `sqlglot`; regex fallback if missing)
+- MCP server: `ndel-mcp` (or `python -m ndel.index`) reads `.ndel.yml` or env for privacy/aliases/abstraction
 - Tests: `pytest`
-- MCP server: `ndel-mcp` (reads `.ndel.yml` or env for privacy/aliases/abstraction)
 - LLM rendering: supply your own callback via `render_pipeline_with_llm`; NDEL never calls an API directly.
 
 ## Validation and Schemas

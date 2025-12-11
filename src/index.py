@@ -31,10 +31,12 @@ from src.schema import (
 from src.analysis import analyze_python_source, analyze_sql_source
 from src.formatter import (
     describe_grammar,
+    NDEL_GRAMMAR,
     render_pipeline,
     validate_ndel_text,
     build_ndel_prompt,
     render_pipeline_with_llm,
+    DEFAULT_NDEL_PROMPT,
 )
 
 mcp = FastMCP(name="ndel")
@@ -177,7 +179,7 @@ def _safe_execute(func, *args, **kwargs):
     except Exception as exc:  # pragma: no cover - defensive
         if debug:
             raise
-        return {"error": str(exc), "type": exc.__class__.__name__}
+        return {"error": str(exc), "type": exc.__class__.__name__, "code": "SERVER_ERROR"}
 
 
 def _filter_fields(cls, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -477,6 +479,13 @@ async def get_doc(name: str) -> Dict[str, str]:
         return {"name": name, "content": path.read_text(encoding="utf-8")}
 
     return _safe_execute(_run)
+
+
+@mcp.tool
+async def ndel_prompt_template() -> Dict[str, str]:
+    """Return the default deterministic NDEL prompt template (for LLM rendering)."""
+
+    return _safe_execute(lambda: {"prompt": DEFAULT_NDEL_PROMPT, "grammar": NDEL_GRAMMAR})
 
 
 async def _health_impl() -> Dict[str, Any]:
