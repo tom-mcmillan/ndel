@@ -2,7 +2,7 @@
 
 __version__ = "0.2.0"
 
-from src.api.describe import (
+from src.describe import (
     describe_python_source,
     describe_callable,
     describe_callable_with_llm,
@@ -25,7 +25,7 @@ from src.pipeline import (
     Transformation,
     ValidationIssue,
 )
-from src.rendering.llm_renderer import LLMGenerate, render_pipeline_with_llm
+from src.llm_renderer import LLMGenerate, render_pipeline_with_llm
 
 __all__ = [
     # Primary public API

@@ -5,11 +5,11 @@ import textwrap
 from collections.abc import Callable
 
 from src.config import NdelConfig
-from src.rendering.llm_renderer import LLMGenerate, render_pipeline_with_llm
+from src.llm_renderer import LLMGenerate, render_pipeline_with_llm
 from src.pipeline import Pipeline, diff_pipelines, merge_pipelines, pipeline_to_dict, pipeline_to_json, validate_config_against_pipeline
-from src.analyzers.python_analyzer import analyze_python_source
-from src.rendering.render import render_pipeline
-from src.analyzers.sql_analyzer import analyze_sql_source
+from src.python_analyzer import analyze_python_source
+from src.render import render_pipeline
+from src.sql_analyzer import analyze_sql_source
 from src.pipeline import ValidationIssue
 
 

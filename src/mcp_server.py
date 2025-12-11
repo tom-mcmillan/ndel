@@ -23,9 +23,9 @@ from src.pipeline import (
     pipeline_to_dict,
     validate_config_against_pipeline,
 )
-from src.rendering.llm_renderer import build_ndel_prompt
-from src.analyzers.python_analyzer import analyze_python_source
-from src.analyzers.sql_analyzer import analyze_sql_source
+from src.llm_renderer import build_ndel_prompt
+from src.python_analyzer import analyze_python_source
+from src.sql_analyzer import analyze_sql_source
 from src.language.spec import describe_grammar, validate_ndel_text
 
 
@@ -214,7 +214,7 @@ async def describe_python_text(source: str, config: Optional[Dict[str, Any]] = N
     def _run():
         ndel_config = _build_config(config)
         pipeline = analyze_python_source(source, config=ndel_config)
-        from src.rendering.render import render_pipeline
+        from src.render import render_pipeline
         return render_pipeline(pipeline, config=ndel_config)
 
     return _safe_execute(_run)
@@ -227,7 +227,7 @@ async def describe_sql_text(sql: str, config: Optional[Dict[str, Any]] = None) -
     def _run():
         ndel_config = _build_config(config)
         pipeline = analyze_sql_source(sql, config=ndel_config)
-        from src.rendering.render import render_pipeline
+        from src.render import render_pipeline
         return render_pipeline(pipeline, config=ndel_config)
 
     return _safe_execute(_run)
@@ -246,7 +246,7 @@ async def describe_sql_and_python_text(
         p_sql = analyze_sql_source(sql, config=ndel_config)
         p_py = analyze_python_source(py_source, config=ndel_config)
         merged = merge_pipelines(p_sql, p_py)
-        from src.rendering.render import render_pipeline
+        from src.render import render_pipeline
         return render_pipeline(merged, config=ndel_config)
 
     return _safe_execute(_run)
@@ -389,7 +389,7 @@ async def synthesize_ndel(
             metrics=[],
             description=intent,
         )
-        from src.rendering.render import render_pipeline
+        from src.render import render_pipeline
         return render_pipeline(placeholder, config=ndel_config)
 
     return _safe_execute(_run)

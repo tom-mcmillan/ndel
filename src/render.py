@@ -5,7 +5,7 @@ from typing import Any
 
 from src.config import AbstractionLevel, NdelConfig
 from src.pipeline import Dataset, Feature, Metric, Model, Pipeline, Transformation
-from src.language.spec import validate_ndel_text
+from src.language_spec import validate_ndel_text
 
 
 def _apply_privacy(value: str, config: NdelConfig | None) -> str:
