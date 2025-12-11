@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from src.config.core import AbstractionLevel, NdelConfig
-from src.pipeline.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
+from src.config import AbstractionLevel, NdelConfig
+from src.pipeline import Dataset, Feature, Metric, Model, Pipeline, Transformation
 from src.language.spec import validate_ndel_text
 
 

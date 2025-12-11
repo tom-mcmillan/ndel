@@ -15,9 +15,16 @@ from src.api.describe import (
     pipeline_to_json,
     validate_config,
 )
-from src.config.core import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
-from src.pipeline.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
-from src.pipeline.validation import ValidationIssue
+from src.config import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
+from src.pipeline import (
+    Dataset,
+    Feature,
+    Metric,
+    Model,
+    Pipeline,
+    Transformation,
+    ValidationIssue,
+)
 from src.rendering.llm_renderer import LLMGenerate, render_pipeline_with_llm
 
 __all__ = [

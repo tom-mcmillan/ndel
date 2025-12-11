@@ -1,2 +1,0 @@
-class AbstractionLevel:
-    pass

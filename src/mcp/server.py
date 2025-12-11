@@ -10,15 +10,22 @@ from typing import Any, Dict, List, Optional
 from fastmcp import FastMCP
 
 from src import __version__ as NDEL_VERSION
-from src.config.core import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
-from src.pipeline.diff import diff_pipelines
-from src.pipeline.lineage import merge_pipelines
+from src.config import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
+from src.pipeline import (
+    Dataset,
+    Feature,
+    Metric,
+    Model,
+    Pipeline,
+    Transformation,
+    diff_pipelines,
+    merge_pipelines,
+    pipeline_to_dict,
+    validate_config_against_pipeline,
+)
 from src.rendering.llm_renderer import build_ndel_prompt
 from src.analyzers.python_analyzer import analyze_python_source
-from src.pipeline.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
-from src.pipeline.serialization import pipeline_to_dict
 from src.analyzers.sql_analyzer import analyze_sql_source
-from src.pipeline.validation import validate_config_against_pipeline
 from src.language.spec import describe_grammar, validate_ndel_text
 
 
