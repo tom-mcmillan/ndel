@@ -2,7 +2,7 @@
 
 __version__ = "0.2.0"
 
-from src.describe import (
+from src.api import (
     describe_python_source,
     describe_callable,
     describe_callable_with_llm,
@@ -16,7 +16,7 @@ from src.describe import (
     validate_config,
 )
 from src.config import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
-from src.types import (
+from src.model import (
     Dataset,
     Feature,
     Metric,
@@ -25,7 +25,7 @@ from src.types import (
     Transformation,
     ValidationIssue,
 )
-from src.llmrenderer import LLMGenerate, render_pipeline_with_llm
+from src.llmwriter import LLMGenerate, render_pipeline_with_llm
 
 __all__ = [
     # Primary public API

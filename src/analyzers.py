@@ -5,7 +5,7 @@ import re
 from typing import Dict, List, Tuple
 
 from src.config import DomainConfig, NdelConfig, PrivacyConfig
-from src.types import Dataset, Feature, Metric, Model, Pipeline, Transformation
+from src.model import Dataset, Feature, Metric, Model, Pipeline, Transformation
 
 
 class AnalysisContext:
