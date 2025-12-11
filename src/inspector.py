@@ -54,7 +54,7 @@ def inspect_project(root: str = ".", db_catalog: Dict[str, Any] | None = None) -
     """Inspect codebase and optional DB catalog to suggest ndel config.
 
     Returns a dict suitable for writing to .ndel.yml. Existing user-edited
-    fields (aliases/privacy) should be preserved by the writer; this function
+    fields (aliases/privacy) should be preserved by the composer; this function
     only produces fresh observations/suggestions.
     """
 

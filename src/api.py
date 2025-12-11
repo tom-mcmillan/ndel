@@ -5,10 +5,10 @@ import textwrap
 from collections.abc import Callable
 
 from src.config import NdelConfig
-from src.llmwriter import LLMGenerate, render_pipeline_with_llm
+from src.llm import LLMGenerate, render_pipeline_with_llm
 from src.model import Pipeline, diff_pipelines, merge_pipelines, pipeline_to_dict, pipeline_to_json, validate_config_against_pipeline
 from src.analyzers import analyze_python_source, analyze_sql_source
-from src.writer import render_pipeline
+from src.composer import render_pipeline
 from src.model import ValidationIssue
 
 
