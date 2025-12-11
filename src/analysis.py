@@ -4,8 +4,14 @@ import ast
 import re
 from typing import Dict, List, Tuple
 
-import sqlglot
-from sqlglot import expressions as exp
+try:  # optional dependency; fallback to regex parsing if missing
+    import sqlglot  # type: ignore
+    from sqlglot import expressions as exp  # type: ignore
+    HAVE_SQLGLOT = True
+except Exception:  # pragma: no cover - fallback path
+    sqlglot = None  # type: ignore
+    exp = None  # type: ignore
+    HAVE_SQLGLOT = False
 
 from src.config import DomainConfig, NdelConfig, PrivacyConfig
 from src.schema import Dataset, Feature, Metric, Model, Pipeline, Transformation
@@ -586,16 +592,18 @@ def analyze_python_source(
 
 
 def analyze_sql_source(sql: str, config: NdelConfig | None = None) -> Pipeline:
-    """SQL analysis into a Pipeline representation using sqlglot."""
+    """SQL analysis into a Pipeline representation using sqlglot when available, otherwise regex fallback."""
 
     datasets: list[Dataset] = []
     transformations: list[Transformation] = []
     features: list[Feature] = []
 
-    try:
-        parsed = sqlglot.parse_one(sql)
-    except Exception:
-        parsed = None
+    parsed = None
+    if HAVE_SQLGLOT and sqlglot:
+        try:
+            parsed = sqlglot.parse_one(sql)
+        except Exception:
+            parsed = None
 
     tables: List[str] = []
     if parsed:
@@ -603,10 +611,14 @@ def analyze_sql_source(sql: str, config: NdelConfig | None = None) -> Pipeline:
             name = table.alias_or_name
             if name and name not in tables:
                 tables.append(name)
+    else:
+        tables += re.findall(r"\bfrom\s+([\w\.]+)", sql, flags=re.IGNORECASE)
+        tables += re.findall(r"\bjoin\s+([\w\.]+)", sql, flags=re.IGNORECASE)
+
     if not tables:
         tables = ["unknown_table"]
 
-    for tbl in tables:
+    for tbl in dict.fromkeys(tables):  # preserve order, remove dups
         datasets.append(Dataset(name=tbl, source=tbl, description="table referenced in SQL", source_type="table"))
 
     if parsed:
@@ -689,7 +701,79 @@ def analyze_sql_source(sql: str, config: NdelConfig | None = None) -> Pipeline:
                 )
             )
     else:
-        tables += re.findall(r"\bfrom\s+([\w\.]+)", sql, flags=re.IGNORECASE)
+        # Fallback regex extraction
+        join_pattern = re.compile(
+            r"join\s+([\w\.]+)(?:\s+\w+)?\s+on\s+(.+?)(?=\bjoin\b|\bwhere\b|\bgroup by\b|\bhaving\b|\border by\b|$)",
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        for match in join_pattern.finditer(sql):
+            table = match.group(1)
+            condition = " ".join(match.group(2).split())
+            transformations.append(
+                Transformation(
+                    name=f"join_{table}",
+                    description=f"join {table} on {condition}",
+                    kind="join",
+                    inputs=[tables[0], table] if tables else [table],
+                    outputs=[tables[0]],
+                )
+            )
+
+        where_match = re.search(r"where\s+(.+?)(group by|having|order by|$)", sql, flags=re.IGNORECASE | re.DOTALL)
+        if where_match:
+            condition = where_match.group(1).strip()
+            transformations.append(
+                Transformation(
+                    name="sql_where_filter",
+                    description=f"filter rows with condition: {condition}",
+                    kind="filter",
+                    inputs=[tables[0]],
+                    outputs=[tables[0]],
+                )
+            )
+
+        group_match = re.search(r"group by\s+(.+?)(having|order by|$)", sql, flags=re.IGNORECASE | re.DOTALL)
+        aggregates = re.findall(r"\b(count|sum|avg|mean|min|max)\s*\(", sql, flags=re.IGNORECASE)
+        if group_match or aggregates:
+            group_cols = group_match.group(1).strip() if group_match else ""
+            agg_desc = "aggregate"
+            if aggregates:
+                agg_desc = f"aggregate using {', '.join(set(a.lower() for a in aggregates))}"
+            if group_cols:
+                agg_desc += f" grouped by {group_cols}"
+            transformations.append(
+                Transformation(
+                    name="sql_groupby_agg",
+                    description=agg_desc,
+                    kind="aggregation",
+                    inputs=[tables[0]],
+                    outputs=[tables[0]],
+                )
+            )
+
+        select_match = re.search(r"select\s+(.+?)\s+from", sql, flags=re.IGNORECASE | re.DOTALL)
+        if select_match:
+            select_clause = select_match.group(1)
+            derived_cols = re.findall(r"\bas\s+([\w_]+)", select_clause, flags=re.IGNORECASE)
+            if derived_cols:
+                for col in derived_cols:
+                    features.append(
+                        Feature(
+                            name=col,
+                            description="derived column from SELECT",
+                            origin=tables[0],
+                            data_type=None,
+                        )
+                    )
+                transformations.append(
+                    Transformation(
+                        name="sql_projection",
+                        description=f"compute derived columns: {', '.join(derived_cols)}",
+                        kind="feature_engineering",
+                        inputs=[tables[0]],
+                        outputs=derived_cols,
+                    )
+                )
 
     if config and config.domain:
         alias_map = config.domain.dataset_aliases

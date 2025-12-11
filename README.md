@@ -113,7 +113,7 @@ Legacy tests and examples have been removed while the new IR, config system, ana
 
 ## Running Locally
 
-- Install: `pip install -e .[dev]`
+- Install: `pip install -e .[dev]` (includes `sqlglot` for full SQL parsing; a regex fallback is used if it’s missing)
 - Tests: `pytest`
 - MCP server: `ndel-mcp` (reads `.ndel.yml` or env for privacy/aliases/abstraction)
 - LLM rendering: supply your own callback via `render_pipeline_with_llm`; NDEL never calls an API directly.
