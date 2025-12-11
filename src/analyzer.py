@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from typing import Dict, List, Tuple
 
 from src.config import DomainConfig, NdelConfig, PrivacyConfig
@@ -139,7 +140,6 @@ class PythonAnalyzer(ast.NodeVisitor):
                     description=None,
                     hyperparameters=None,
                 )
-                # Fall through to handle special sklearn pipeline structures if applicable
 
             if func_name in {"Pipeline", "ColumnTransformer"}:
                 self._capture_sklearn_structure(node.value)
@@ -169,7 +169,6 @@ class PythonAnalyzer(ast.NodeVisitor):
                     elif fit_origin:
                         model.inputs = [fit_origin]
 
-        # Detect inline sklearn Pipeline/ColumnTransformer creations
         if isinstance(func, (ast.Name, ast.Attribute)):
             callee = func.id if isinstance(func, ast.Name) else func.attr
             if callee in {"Pipeline", "ColumnTransformer"}:
@@ -180,7 +179,6 @@ class PythonAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _record_assignment_transformation(self, target: ast.AST, value: ast.AST) -> None:
-        # Column assignment: df["col"] = ...
         if isinstance(target, ast.Subscript) and isinstance(target.value, ast.Name):
             dataset_name = target.value.id
             col_name = self._extract_subscript_key(target)
@@ -202,7 +200,6 @@ class PythonAnalyzer(ast.NodeVisitor):
 
         target_name = target.id
 
-        # Filters using boolean indexing or .loc
         base_name = self._base_name_from_subscript(value)
         if base_name and base_name == target_name:
             self._add_transformation(
@@ -215,14 +212,12 @@ class PythonAnalyzer(ast.NodeVisitor):
             self.current_origin_for_dataset[target_name] = self.transformations[-1].name
             return
 
-        # Calls and chained operations
         if isinstance(value, ast.Call):
             self._handle_call_assignment(target_name, value)
 
     def _handle_call_assignment(self, target_name: str, call: ast.Call) -> None:
         base_name, ops = self._extract_call_chain(call)
 
-        # Handle pd.concat as a special top-level call
         if base_name == "pd" and ops and ops[-1][0] == "concat":
             inputs = self._extract_names_from_iterable(ops[-1][1].args[0] if ops[-1][1].args else None)
             self._add_transformation(
@@ -455,7 +450,6 @@ class PythonAnalyzer(ast.NodeVisitor):
 
     def _extract_transformers_kw(self, call: ast.Call) -> list[tuple[str, str | None, list[str]]]:
         transformers: list[tuple[str, str | None, list[str]]] = []
-        # transformers can be passed positionally or via keyword
         args_iterables = []
         if call.args:
             args_iterables.append(call.args[0])
@@ -475,8 +469,6 @@ class PythonAnalyzer(ast.NodeVisitor):
         return transformers
 
     def _extract_subscript_key(self, node: ast.Subscript) -> str | None:
-        """Get the string key from a subscript like df["col"]."""
-
         key = node.slice
         if isinstance(key, ast.Constant) and isinstance(key.value, str):
             return key.value
@@ -496,8 +488,6 @@ class PythonAnalyzer(ast.NodeVisitor):
         return None
 
     def _base_name_from_groupby(self, node: ast.AST) -> str | None:
-        """Extract dataset name from a groupby chain."""
-
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "groupby":
             if isinstance(node.func.value, ast.Name):
                 return node.func.value.id
@@ -559,8 +549,6 @@ class PythonAnalyzer(ast.NodeVisitor):
         )
 
     def _capture_features_from_fit(self, arg: ast.AST) -> tuple[list[str], str | None]:
-        """Capture feature names from model.fit arguments like df[["a", "b"]]."""
-
         feature_names: list[str] = []
         origin: str | None = None
         if isinstance(arg, ast.Subscript):
@@ -592,7 +580,6 @@ class PythonAnalyzer(ast.NodeVisitor):
         return cols
 
     def _extract_source_from_call(self, call: ast.Call) -> str | None:
-        # Look for first string literal arg as source (e.g., file path, table name)
         for arg in call.args:
             if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
                 return arg.value
@@ -604,10 +591,117 @@ def analyze_python_source(
     config: NdelConfig | None = None,
     custom_detectors: list[callable] | None = None,
 ) -> Pipeline:
-    """Analyze Python source into an NDEL Pipeline (early prototype)."""
-
     analyzer = PythonAnalyzer(source, config=config, custom_detectors=custom_detectors)
     return analyzer.analyze()
 
 
-__all__ = ["PythonAnalyzer", "analyze_python_source"]
+def analyze_sql_source(sql: str, config: NdelConfig | None = None) -> Pipeline:
+    """Lightweight SQL analysis into a Pipeline representation."""
+
+    text = sql
+    datasets: list[Dataset] = []
+    transformations: list[Transformation] = []
+    features: list[Feature] = []
+
+    tables: List[str] = []
+    tables += re.findall(r"\bfrom\s+([\w\.]+)", text, flags=re.IGNORECASE)
+    tables += re.findall(r"\bjoin\s+([\w\.]+)", text, flags=re.IGNORECASE)
+    tables = list(dict.fromkeys(tables))
+    if not tables:
+        tables = ["unknown_table"]
+
+    for tbl in tables:
+        datasets.append(Dataset(name=tbl, source=tbl, description="table referenced in SQL", source_type="table"))
+
+    join_pattern = re.compile(
+        r"join\s+([\w\.]+)(?:\s+\w+)?\s+on\s+(.+?)(?=\bjoin\b|\bwhere\b|\bgroup by\b|\bhaving\b|\border by\b|$)",
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    for match in join_pattern.finditer(text):
+        table = match.group(1)
+        condition = " ".join(match.group(2).split())
+        transformations.append(
+            Transformation(
+                name=f"join_{table}",
+                description=f"join {table} on {condition}",
+                kind="join",
+                inputs=[tables[0], table] if tables else [table],
+                outputs=[tables[0]],
+            )
+        )
+
+    where_match = re.search(r"where\s+(.+?)(group by|having|order by|$)", text, flags=re.IGNORECASE | re.DOTALL)
+    if where_match:
+        condition = where_match.group(1).strip()
+        transformations.append(
+            Transformation(
+                name="sql_where_filter",
+                description=f"filter rows with condition: {condition}",
+                kind="filter",
+                inputs=[tables[0]],
+                outputs=[tables[0]],
+            )
+        )
+
+    group_match = re.search(r"group by\s+(.+?)(having|order by|$)", text, flags=re.IGNORECASE | re.DOTALL)
+    aggregates = re.findall(r"\b(count|sum|avg|mean|min|max)\s*\(", text, flags=re.IGNORECASE)
+    if group_match or aggregates:
+        group_cols = group_match.group(1).strip() if group_match else ""
+        agg_desc = "aggregate"
+        if aggregates:
+            agg_desc = f"aggregate using {', '.join(set(a.lower() for a in aggregates))}"
+        if group_cols:
+            agg_desc += f" grouped by {group_cols}"
+        transformations.append(
+            Transformation(
+                name="sql_groupby_agg",
+                description=agg_desc,
+                kind="aggregation",
+                inputs=[tables[0]],
+                outputs=[tables[0]],
+            )
+        )
+
+    select_match = re.search(r"select\s+(.+?)\s+from", text, flags=re.IGNORECASE | re.DOTALL)
+    if select_match:
+        select_clause = select_match.group(1)
+        derived_cols = re.findall(r"\bas\s+([\w_]+)", select_clause, flags=re.IGNORECASE)
+        if derived_cols:
+            for col in derived_cols:
+                features.append(
+                    Feature(
+                        name=col,
+                        description="derived column from SELECT",
+                        origin=tables[0],
+                        data_type=None,
+                    )
+                )
+            transformations.append(
+                Transformation(
+                    name="sql_projection",
+                    description=f"compute derived columns: {', '.join(derived_cols)}",
+                    kind="feature_engineering",
+                    inputs=[tables[0]],
+                    outputs=derived_cols,
+                )
+            )
+
+    if config and config.domain:
+        alias_map = config.domain.dataset_aliases
+        for ds in datasets:
+            if ds.name in alias_map:
+                ds.name = alias_map[ds.name]
+
+    pipeline = Pipeline(
+        name="sql_pipeline",
+        datasets=datasets,
+        transformations=transformations,
+        features=features,
+        models=[],
+        metrics=[],
+        description=None,
+    )
+    return pipeline
+
+
+__all__ = ["PythonAnalyzer", "analyze_python_source", "analyze_sql_source"]

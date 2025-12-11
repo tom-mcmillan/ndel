@@ -24,8 +24,7 @@ from src.pipeline import (
     validate_config_against_pipeline,
 )
 from src.llmrenderer import build_ndel_prompt
-from src.pythonanalyzer import analyze_python_source
-from src.sqlanalyzer import analyze_sql_source
+from src.analyzer import analyze_python_source, analyze_sql_source
 from src.language.spec import describe_grammar, validate_ndel_text
 
 
