@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass, field, is_dataclass
-from typing import Any, Literal
+from typing import Any, Dict, List, Literal
 
 from src.config import AbstractionLevel, NdelConfig
+
+try:
+    import jsonschema
+except Exception:  # pragma: no cover
+    jsonschema = None  # type: ignore
 
 
 # ---------------------------------------------------------------------------
@@ -23,9 +28,6 @@ class Dataset:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
-    def __str__(self) -> str:  # pragma: no cover - convenience
-        return self.name
-
 
 @dataclass
 class Transformation:
@@ -38,9 +40,6 @@ class Transformation:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
-    def __str__(self) -> str:  # pragma: no cover - convenience
-        return self.name
-
 
 @dataclass
 class Feature:
@@ -51,9 +50,6 @@ class Feature:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-
-    def __str__(self) -> str:  # pragma: no cover - convenience
-        return self.name
 
 
 @dataclass
@@ -69,9 +65,6 @@ class Model:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
-    def __str__(self) -> str:  # pragma: no cover - convenience
-        return self.name
-
 
 @dataclass
 class Metric:
@@ -82,9 +75,6 @@ class Metric:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-
-    def __str__(self) -> str:  # pragma: no cover - convenience
-        return self.name
 
 
 @dataclass
@@ -99,9 +89,6 @@ class Pipeline:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-
-    def __str__(self) -> str:  # pragma: no cover - convenience
-        return self.name
 
 
 # ---------------------------------------------------------------------------
@@ -145,11 +132,6 @@ def diff_pipelines(old: Pipeline, new: Pipeline) -> PipelineDiff:
         metrics_added=sorted(new_metrics - old_metrics),
         metrics_removed=sorted(old_metrics - new_metrics),
     )
-
-
-# ---------------------------------------------------------------------------
-# Lineage merge
-# ---------------------------------------------------------------------------
 
 
 def merge_pipelines(p_sql: Pipeline, p_py: Pipeline) -> Pipeline:
@@ -257,6 +239,64 @@ def validate_config_against_pipeline(config: NdelConfig, pipeline: Pipeline) -> 
     return issues
 
 
+def validate_pipeline_structure(pipeline: Pipeline) -> List[ValidationIssue]:
+    """Validate IR invariants: unique names and referenced inputs existing."""
+
+    issues: List[ValidationIssue] = []
+
+    def _dup_issues(items, kind: str):
+        seen: set[str] = set()
+        dups: set[str] = set()
+        for item in items:
+            name = getattr(item, "name", None)
+            if name in seen:
+                dups.add(name)
+            seen.add(name)
+        for name in sorted(dups):
+            issues.append(ValidationIssue(kind="error", code=f"DUPLICATE_{kind.upper()}", message=f"Duplicate {kind} name: {name}"))
+        return seen
+
+    ds_names = _dup_issues(pipeline.datasets, "dataset")
+    tf_names = _dup_issues(pipeline.transformations, "transformation")
+    feat_names = _dup_issues(pipeline.features, "feature")
+    model_names = _dup_issues(pipeline.models, "model")
+    metric_names = _dup_issues(pipeline.metrics, "metric")
+
+    known_refs = ds_names | tf_names | feat_names | model_names | metric_names
+
+    for t in pipeline.transformations:
+        for input_name in t.inputs:
+            if input_name and input_name not in known_refs:
+                issues.append(
+                    ValidationIssue(
+                        kind="warning",
+                        code="UNKNOWN_INPUT",
+                        message=f"Transformation '{t.name}' references unknown input '{input_name}'",
+                    )
+                )
+        for output_name in t.outputs:
+            if not output_name:
+                issues.append(
+                    ValidationIssue(
+                        kind="warning",
+                        code="EMPTY_OUTPUT",
+                        message=f"Transformation '{t.name}' has empty output reference",
+                    )
+                )
+
+    for feature in pipeline.features:
+        if feature.origin and feature.origin not in known_refs:
+            issues.append(
+                ValidationIssue(
+                    kind="warning",
+                    code="UNKNOWN_FEATURE_ORIGIN",
+                    message=f"Feature '{feature.name}' origin '{feature.origin}' not found",
+                )
+            )
+
+    return issues
+
+
 # ---------------------------------------------------------------------------
 # Serialization
 # ---------------------------------------------------------------------------
@@ -282,6 +322,138 @@ def pipeline_to_json(pipeline: Pipeline, **json_kwargs: Any) -> str:
     return json.dumps(pipeline_to_dict(pipeline), **json_kwargs)
 
 
+# ---------------------------------------------------------------------------
+# Schemas
+# ---------------------------------------------------------------------------
+
+
+PIPELINE_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "required": ["name"],
+    "properties": {
+        "name": {"type": "string"},
+        "description": {"type": ["string", "null"]},
+        "datasets": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                    "name": {"type": "string"},
+                    "source": {"type": ["string", "null"]},
+                    "description": {"type": ["string", "null"]},
+                    "source_type": {"type": ["string", "null"]},
+                    "notes": {"type": "array", "items": {"type": "string"}},
+                },
+                "additionalProperties": True,
+            },
+        },
+        "transformations": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["name", "description"],
+                "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "kind": {"type": ["string", "null"]},
+                    "inputs": {"type": "array", "items": {"type": "string"}},
+                    "outputs": {"type": "array", "items": {"type": "string"}},
+                },
+                "additionalProperties": True,
+            },
+        },
+        "features": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["name", "description"],
+                "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "origin": {"type": ["string", "null"]},
+                    "data_type": {"type": ["string", "null"]},
+                },
+                "additionalProperties": True,
+            },
+        },
+        "models": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["name", "task"],
+                "properties": {
+                    "name": {"type": "string"},
+                    "task": {"type": "string"},
+                    "algorithm_family": {"type": ["string", "null"]},
+                    "inputs": {"type": "array", "items": {"type": "string"}},
+                    "target": {"type": ["string", "null"]},
+                    "description": {"type": ["string", "null"]},
+                    "hyperparameters": {"type": ["object", "null"]},
+                },
+                "additionalProperties": True,
+            },
+        },
+        "metrics": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": ["string", "null"]},
+                    "dataset": {"type": ["string", "null"]},
+                    "higher_is_better": {"type": ["boolean", "null"]},
+                },
+                "additionalProperties": True,
+            },
+        },
+    },
+    "additionalProperties": True,
+}
+
+CONFIG_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "privacy": {
+            "type": "object",
+            "properties": {
+                "hide_table_names": {"type": "boolean"},
+                "hide_file_paths": {"type": "boolean"},
+                "redact_identifiers": {"type": "array", "items": {"type": "string"}},
+                "max_literal_length": {"type": ["integer", "null"]},
+            },
+            "additionalProperties": True,
+        },
+        "domain": {
+            "type": "object",
+            "properties": {
+                "dataset_aliases": {"type": "object", "additionalProperties": {"type": "string"}},
+                "model_aliases": {"type": "object", "additionalProperties": {"type": "string"}},
+                "feature_aliases": {"type": "object", "additionalProperties": {"type": "string"}},
+                "pipeline_name": {"type": ["string", "null"]},
+            },
+            "additionalProperties": True,
+        },
+        "abstraction": {"type": ["string", "null"]},
+    },
+    "additionalProperties": True,
+}
+
+
+def validate_schema(payload: Any, schema: Dict[str, Any]) -> List[str]:
+    """Validate payload against schema; returns list of errors instead of raising."""
+
+    if jsonschema is None:
+        return []  # jsonschema not installed; skip strict validation
+
+    validator = jsonschema.Draft7Validator(schema)  # type: ignore[attr-defined]
+    errors = []
+    for err in validator.iter_errors(payload):
+        errors.append(err.message)
+    return errors
+
+
 __all__ = [
     "Dataset",
     "Transformation",
@@ -294,6 +466,10 @@ __all__ = [
     "diff_pipelines",
     "merge_pipelines",
     "validate_config_against_pipeline",
+    "validate_pipeline_structure",
     "pipeline_to_dict",
     "pipeline_to_json",
+    "PIPELINE_SCHEMA",
+    "CONFIG_SCHEMA",
+    "validate_schema",
 ]

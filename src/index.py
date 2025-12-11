@@ -1,4 +1,4 @@
-"""FastMCP server exposing NDEL analysis tools."""
+"""FastMCP server and public API surface for NDEL."""
 
 from __future__ import annotations
 
@@ -8,12 +8,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
-
 from fastmcp import FastMCP
 
 from src import __version__ as NDEL_VERSION
 from src.config import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
-from src.types import (
+from src.schema import (
+    CONFIG_SCHEMA,
+    PIPELINE_SCHEMA,
     Dataset,
     Feature,
     Metric,
@@ -24,48 +25,25 @@ from src.types import (
     merge_pipelines,
     pipeline_to_dict,
     validate_config_against_pipeline,
+    validate_pipeline_structure,
+    validate_schema,
 )
-from src.llm import build_ndel_prompt
-from src.analyzers import analyze_python_source, analyze_sql_source
-from src.grammar import describe_grammar, validate_ndel_text
-
+from src.analysis import analyze_python_source, analyze_sql_source
+from src.formatter import (
+    describe_grammar,
+    render_pipeline,
+    validate_ndel_text,
+    build_ndel_prompt,
+    render_pipeline_with_llm,
+)
 
 mcp = FastMCP(name="ndel")
 ROOT_DIR = Path(__file__).resolve().parents[2]
 
 DOC_PATHS: Dict[str, Path] = {
     "readme": ROOT_DIR / "README.md",
-    "overview": ROOT_DIR / "docs" / "overview.md",
-    "philosophy": ROOT_DIR / "docs" / "philosophy.md",
-    "cookbook_ci": ROOT_DIR / "docs" / "cookbook_ci_integration.md",
-    "cookbook_churn": ROOT_DIR / "docs" / "cookbook_churn_pipeline.md",
-    "cookbook_feature_store": ROOT_DIR / "docs" / "cookbook_custom_feature_store_detector.md",
 }
 
-
-# ---------------------------------------------------------------------------
-# NDEL grammar helpers
-# ---------------------------------------------------------------------------
-
-
-@mcp.tool
-async def ndel_grammar() -> Dict[str, str]:
-    """Return the human-readable NDEL grammar description."""
-
-    return {"grammar": describe_grammar()}
-
-
-@mcp.tool
-async def validate_ndel(text: str) -> Dict[str, Any]:
-    """Validate NDEL text against expected shape; returns warnings if any."""
-
-    warnings = validate_ndel_text(text)
-    return {"warnings": warnings, "is_valid": len(warnings) == 0}
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _bool_env(name: str, default: bool = False) -> bool:
     val = os.getenv(name)
@@ -124,8 +102,19 @@ def _discover_config_file(start_dir: Path) -> Path | None:
     return None
 
 
+def _config_schema_errors(payload: Dict[str, Any]) -> List[str]:
+    return validate_schema(payload, CONFIG_SCHEMA)
+
+
+def _schema_errors(payload: Dict[str, Any]) -> List[str]:
+    return validate_schema(payload, PIPELINE_SCHEMA)
+
+
 def _build_config(payload: Optional[Dict[str, Any]] = None, config_path: str | None = None) -> NdelConfig:
     payload = payload or {}
+    schema_errs = _config_schema_errors(payload)
+    if schema_errs:
+        raise ValueError(f"Config payload failed schema validation: {schema_errs}")
 
     file_config_path = Path(config_path) if config_path else _discover_config_file(Path.cwd())
     file_config = _load_file_config(file_config_path)
@@ -197,6 +186,10 @@ def _filter_fields(cls, data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _dict_to_pipeline(data: Dict[str, Any]) -> Pipeline:
+    schema_errors = _schema_errors(data)
+    if schema_errors:
+        raise ValueError(f"Pipeline payload failed schema validation: {schema_errors}")
+
     datasets = [
         Dataset(**_filter_fields(Dataset, ds))
         for ds in data.get("datasets", [])
@@ -229,18 +222,18 @@ def _dict_to_pipeline(data: Dict[str, Any]) -> Pipeline:
     )
 
 
-def _read_doc(name: str) -> str:
-    if name not in DOC_PATHS:
-        raise ValueError(f"Unknown doc: {name}")
-    path = DOC_PATHS[name]
-    if not path.exists():
-        raise FileNotFoundError(f"Doc not found: {path}")
-    return path.read_text(encoding="utf-8")
+@mcp.tool
+async def ndel_grammar() -> Dict[str, str]:
+    """Return the human-readable NDEL grammar description."""
+    return {"grammar": describe_grammar()}
 
 
-# ---------------------------------------------------------------------------
-# Tools
-# ---------------------------------------------------------------------------
+@mcp.tool
+async def validate_ndel(text: str) -> Dict[str, Any]:
+    """Validate NDEL text against expected shape; returns warnings if any."""
+
+    warnings = validate_ndel_text(text)
+    return {"warnings": warnings, "is_valid": len(warnings) == 0}
 
 
 @mcp.tool
@@ -250,7 +243,6 @@ async def describe_python_text(source: str, config: Optional[Dict[str, Any]] = N
     def _run():
         ndel_config = _build_config(config)
         pipeline = analyze_python_source(source, config=ndel_config)
-        from src.composer import render_pipeline
         return render_pipeline(pipeline, config=ndel_config)
 
     return _safe_execute(_run)
@@ -263,7 +255,6 @@ async def describe_sql_text(sql: str, config: Optional[Dict[str, Any]] = None) -
     def _run():
         ndel_config = _build_config(config)
         pipeline = analyze_sql_source(sql, config=ndel_config)
-        from src.composer import render_pipeline
         return render_pipeline(pipeline, config=ndel_config)
 
     return _safe_execute(_run)
@@ -282,7 +273,6 @@ async def describe_sql_and_python_text(
         p_sql = analyze_sql_source(sql, config=ndel_config)
         p_py = analyze_python_source(py_source, config=ndel_config)
         merged = merge_pipelines(p_sql, p_py)
-        from src.composer import render_pipeline
         return render_pipeline(merged, config=ndel_config)
 
     return _safe_execute(_run)
@@ -332,6 +322,16 @@ async def pipeline_diff(
     """Diff two pipelines (dict form) and return summary plus structured diff."""
 
     def _run():
+        schema_errs_old = _schema_errors(old_pipeline)
+        schema_errs_new = _schema_errors(new_pipeline)
+        if schema_errs_old or schema_errs_new:
+            return {
+                "error": "schema_validation_failed",
+                "details": {
+                    "old_pipeline_errors": schema_errs_old,
+                    "new_pipeline_errors": schema_errs_new,
+                },
+            }
         old = _dict_to_pipeline(old_pipeline)
         new = _dict_to_pipeline(new_pipeline)
         d = diff_pipelines(old, new)
@@ -372,16 +372,41 @@ async def pipeline_diff(
 
 
 @mcp.tool
-async def validate_config(
+async def validate_config_tool(
     config: Dict[str, Any],
     pipeline: Dict[str, Any],
 ) -> Dict[str, Any]:
     """Validate NdelConfig against a pipeline dict."""
 
     def _run():
+        schema_errs = _schema_errors(pipeline)
+        if schema_errs:
+            return {"issues": [{"kind": "error", "code": "SCHEMA_INVALID", "message": "; ".join(schema_errs)}]}
         ndel_config = _build_config(config)
         pipe = _dict_to_pipeline(pipeline)
         issues = validate_config_against_pipeline(ndel_config, pipe)
+        return {
+            "issues": [
+                {"kind": issue.kind, "code": issue.code, "message": issue.message}
+                for issue in issues
+            ]
+        }
+
+    return _safe_execute(_run)
+
+
+@mcp.tool
+async def validate_pipeline_structural(
+    pipeline: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Validate structural integrity of a pipeline (unique names, known references)."""
+
+    def _run():
+        schema_errs = _schema_errors(pipeline)
+        if schema_errs:
+            return {"issues": [{"kind": "error", "code": "SCHEMA_INVALID", "message": "; ".join(schema_errs)}]}
+        pipe = _dict_to_pipeline(pipeline)
+        issues = validate_pipeline_structure(pipe)
         return {
             "issues": [
                 {"kind": issue.kind, "code": issue.code, "message": issue.message}
@@ -406,13 +431,7 @@ async def synthesize_ndel(
     intent: str,
     config: Optional[Dict[str, Any]] = None,
 ) -> str:
-    """Create a minimal NDEL pipeline from high-level intent text.
-
-    This is a bridge for conversational agents: it emits a stub Pipeline with
-    the intent as description and a single dataset placeholder, then renders
-    deterministically. Callers can combine with ndel_grammar/validate_ndel for
-    stricter checks.
-    """
+    """Create a minimal NDEL pipeline from high-level intent text."""
 
     def _run():
         ndel_config = _build_config(config)
@@ -425,7 +444,6 @@ async def synthesize_ndel(
             metrics=[],
             description=intent,
         )
-        from src.composer import render_pipeline
         return render_pipeline(placeholder, config=ndel_config)
 
     return _safe_execute(_run)
@@ -450,7 +468,15 @@ async def list_docs() -> Dict[str, Any]:
 async def get_doc(name: str) -> Dict[str, str]:
     """Retrieve a documentation file by name."""
 
-    return _safe_execute(lambda: {"name": name, "content": _read_doc(name)})
+    def _run():
+        if name not in DOC_PATHS:
+            raise ValueError(f"Unknown doc: {name}")
+        path = DOC_PATHS[name]
+        if not path.exists():
+            raise FileNotFoundError(f"Doc not found: {path}")
+        return {"name": name, "content": path.read_text(encoding="utf-8")}
+
+    return _safe_execute(_run)
 
 
 async def _health_impl() -> Dict[str, Any]:
@@ -464,10 +490,6 @@ async def _health_impl() -> Dict[str, Any]:
 
 
 health = mcp.tool(_health_impl)
-
-
-if __name__ == "__main__":
-    mcp.run()
 
 
 def main() -> None:

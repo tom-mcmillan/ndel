@@ -2,21 +2,8 @@
 
 __version__ = "0.2.0"
 
-from src.api import (
-    describe_python_source,
-    describe_callable,
-    describe_callable_with_llm,
-    describe_sql_and_python,
-    describe_sql_and_python_with_llm,
-    describe_sql_source,
-    describe_sql_source_with_llm,
-    describe_pipeline_diff,
-    pipeline_to_dict,
-    pipeline_to_json,
-    validate_config,
-)
 from src.config import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
-from src.model import (
+from src.schema import (
     Dataset,
     Feature,
     Metric,
@@ -24,24 +11,41 @@ from src.model import (
     Pipeline,
     Transformation,
     ValidationIssue,
+    diff_pipelines,
+    merge_pipelines,
+    pipeline_to_dict,
+    pipeline_to_json,
+    validate_config_against_pipeline,
+    validate_pipeline_structure,
 )
-from src.llm import LLMGenerate, render_pipeline_with_llm
+from src.analysis import analyze_python_source, analyze_sql_source, PythonAnalyzer, AnalysisContext
+from src.formatter import (
+    render_pipeline,
+    apply_privacy,
+    apply_privacy_to_payload,
+    describe_grammar,
+    validate_ndel_text,
+    build_ndel_prompt,
+    render_pipeline_with_llm,
+    LLMGenerate,
+)
 
 __all__ = [
-    # Primary public API
-    "describe_python_source",
-    "describe_callable",
-    "describe_callable_with_llm",
-    "describe_sql_and_python",
-    "describe_sql_and_python_with_llm",
-    "describe_pipeline_diff",
-    "pipeline_to_dict",
-    "pipeline_to_json",
-    "validate_config",
-    "describe_sql_source",
-    "describe_sql_source_with_llm",
-    "describe_python_source_with_llm",
+    # Analysis
+    "analyze_python_source",
+    "analyze_sql_source",
+    "PythonAnalyzer",
+    "AnalysisContext",
+
+    # Rendering / formatting
+    "render_pipeline",
+    "apply_privacy",
+    "apply_privacy_to_payload",
+    "describe_grammar",
+    "validate_ndel_text",
+    "validate_pipeline_structure",
     "render_pipeline_with_llm",
+    "build_ndel_prompt",
     "LLMGenerate",
 
     # Semantic model
@@ -51,11 +55,16 @@ __all__ = [
     "Feature",
     "Model",
     "Metric",
+    "diff_pipelines",
+    "merge_pipelines",
+    "pipeline_to_dict",
+    "pipeline_to_json",
+    "ValidationIssue",
 
     # Configuration
     "NdelConfig",
     "PrivacyConfig",
     "DomainConfig",
     "AbstractionLevel",
-    "ValidationIssue",
+    "validate_config_against_pipeline",
 ]

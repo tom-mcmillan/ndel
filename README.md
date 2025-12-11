@@ -76,42 +76,29 @@ NDEL can compare pipelines, enforce privacy rules, and export JSON representatio
 
 ## Architecture Overview
 
-NDEL follows a clean, layered design:
+Flat but separated modules:
 
-src/
-  analyzers/     Python and SQL static analysis  
-  pipeline/      Semantic IR (datasets, lineage, transforms, diff, validation)  
-  rendering/     Deterministic and LLM rendering  
-  config/        Privacy and abstraction configuration  
-  api/           Public entrypoints (describe, diff, validate, prompt)  
-  mcp/           Thin MCP adapter exposing NDEL tools  
-  utils/         Environment and logging helpers  
+- config.py — privacy/abstraction/domain config and merge helpers  
+- schema.py — IR dataclasses, diff/merge, invariants, JSON Schemas, serialization  
+- analysis.py — Python AST + sqlglot SQL analyzers → Pipeline  
+- formatter.py — deterministic renderer, grammar/validator, privacy helpers, LLM prompt/render  
+- types.py — shared type aliases (LLM callbacks, detectors)  
+- index.py — MCP server/tools and public entrypoints  
 
-This structure ensures clear module boundaries and allows the MCP server to remain a minimal integration layer.
+This keeps concerns clear without nested packages.
 
 ---
 
 ## The NDEL MCP Server
 
-The MCP adapter exposes exactly five tools:
-
-### describe_pipeline
-Given Python or SQL code, return:
-- deterministic NDEL text  
-- optional LLM-rendered explanation  
-- pipeline IR (JSON)
-
-### diff_pipelines
-Diff two pipelines or two NDEL texts.
-
-### validate_pipeline
-Validate privacy rules, alias mappings, and structural consistency.
-
-### build_prompt
-Return the deterministic NDEL prompt used for the LLM renderer.
-
-### health
-Standard MCP health check.
+Key tools (stdio via `ndel-mcp`):
+- `describe_python_text` / `describe_sql_text` / `describe_sql_and_python_text` → deterministic NDEL text  
+- `describe_*_json` → pipeline JSON  
+- `pipeline_diff` → structured diff + summary  
+- `validate_config_tool` / `validate_pipeline_structural` → config and IR checks  
+- `build_prompt` → LLM-ready prompt; `ndel_grammar` / `validate_ndel` helpers  
+- `synthesize_ndel` → minimal stub from intent  
+- `health`, `list_docs`, `get_doc`
 
 The MCP server reads configuration entirely from environment variables, giving it a stable and predictable personality.
 
@@ -121,6 +108,21 @@ The MCP server reads configuration entirely from environment variables, giving i
 
 NDEL is currently undergoing a full architectural rewrite.  
 Legacy tests and examples have been removed while the new IR, config system, analyzers, and renderer are rebuilt from first principles.
+
+---
+
+## Running Locally
+
+- Install: `pip install -e .[dev]`
+- Tests: `pytest`
+- MCP server: `ndel-mcp` (reads `.ndel.yml` or env for privacy/aliases/abstraction)
+- LLM rendering: supply your own callback via `render_pipeline_with_llm`; NDEL never calls an API directly.
+
+## Validation and Schemas
+
+- Pipelines are validated against a JSON Schema and IR invariants (unique names, known references).
+- Config payloads are schema-validated; privacy and aliases are honored upstream.
+- MCP tools expose deterministic rendering and validation helpers (`validate_config`, `validate_pipeline_structural`, `pipeline_diff`, `build_prompt`).
 
 ---
 

@@ -28,10 +28,12 @@ classifiers = [
 dependencies = [
     "fastmcp>=2.0.0",
     "pyyaml>=6.0",
+    "jsonschema>=4.0.0",
+    "sqlglot>=21.0.0",
 ]
 
 [project.scripts]
-ndel-mcp = "src.server:main"
+ndel-mcp = "src.index:main"
 
 
 [project.optional-dependencies]
