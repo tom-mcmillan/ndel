@@ -23,16 +23,6 @@ from ndel.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Trans
 from ndel.validation import ValidationIssue
 from ndel.llm_renderer import LLMGenerate, render_pipeline_with_llm
 
-__version__ = "0.2.0"
-
-
-def describe(python_code: str, domain: Optional[LegacyDomainConfig] = None) -> str:
-    """Backward-compatible describe entrypoint using the legacy translator."""
-
-    ndel_text = translate(python_code)
-    return apply_domain(ndel_text, domain)
-
-
 __all__ = [
     # Primary public API
     "describe_python_source",
