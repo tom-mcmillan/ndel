@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ndel-mcp = "src.mcp.server:main"
+ndel-mcp = "src.server:main"
 
 
 [project.optional-dependencies]

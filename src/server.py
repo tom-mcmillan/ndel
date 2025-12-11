@@ -25,7 +25,7 @@ from src.pipeline import (
 )
 from src.llmrenderer import build_ndel_prompt
 from src.analyzer import analyze_python_source, analyze_sql_source
-from src.language.spec import describe_grammar, validate_ndel_text
+from src.grammar import describe_grammar, validate_ndel_text
 
 
 mcp = FastMCP(name="ndel")
