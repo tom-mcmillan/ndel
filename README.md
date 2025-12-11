@@ -117,7 +117,7 @@ Legacy tests and examples have been removed while the new IR, config system, ana
   - Create venv: `python3 -m venv .venv && source .venv/bin/activate`
   - Upgrade pip: `python -m pip install --upgrade pip`
   - Install: `python -m pip install -e '.[dev]'` (includes `sqlglot`; regex fallback if missing)
-- MCP server: `ndel-mcp` (or `python -m ndel.index`) reads `.ndel.yml` or env for privacy/aliases/abstraction
+- MCP server (stdio): `ndel-mcp` (preferred) or `python -m ndel.index`; reads `.ndel.yml` or env for privacy/aliases/abstraction
 - Tests: `pytest`
 - LLM rendering: supply your own callback via `render_pipeline_with_llm`; NDEL never calls an API directly.
 
