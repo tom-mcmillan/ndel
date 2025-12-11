@@ -18,28 +18,9 @@ from ndel.api import (
     pipeline_to_json,
     validate_config,
 )
-from ndel.ast import (
-    ASTNode,
-    BinaryOp,
-    Call,
-    Conditional,
-    DomainDeclaration,
-    FuzzyPredicate,
-    Identifier,
-    IndexAccess,
-    ListLiteral,
-    Literal,
-    MapLiteral,
-    MemberAccess,
-    UnaryOp,
-)
 from ndel.config import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
-from ndel.domains import DomainConfig as LegacyDomainConfig
-from ndel.domains import apply_domain
-from ndel.parser import parse_ndel, print_ast
 from ndel.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
 from ndel.validation import ValidationIssue
-from ndel.translator import translate
 from ndel.llm_renderer import LLMGenerate, render_pipeline_with_llm
 
 __version__ = "0.2.0"
@@ -83,24 +64,4 @@ __all__ = [
     "DomainConfig",
     "AbstractionLevel",
     "ValidationIssue",
-
-    # Compatibility API
-    "describe",
-    "translate",
-    "apply_domain",
-    "parse_ndel",
-    "print_ast",
-    "ASTNode",
-    "Literal",
-    "Identifier",
-    "BinaryOp",
-    "UnaryOp",
-    "FuzzyPredicate",
-    "MemberAccess",
-    "IndexAccess",
-    "Call",
-    "ListLiteral",
-    "MapLiteral",
-    "DomainDeclaration",
-    "Conditional",
 ]
