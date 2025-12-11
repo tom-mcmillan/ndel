@@ -46,6 +46,18 @@ DOC_PATHS: Dict[str, Path] = {
     "readme": ROOT_DIR / "README.md",
 }
 
+# Register resources for MCP: README, grammar, prompt.
+RESOURCES: Dict[str, Dict[str, str]] = {
+    "readme": {"uri": "ndel://docs/readme", "name": "README", "description": "NDEL overview and usage", "path": str(DOC_PATHS["readme"])},
+    "grammar": {"uri": "ndel://docs/grammar", "name": "NDEL Grammar", "description": "NDEL grammar text"},
+    "prompt": {"uri": "ndel://docs/prompt", "name": "NDEL Prompt Template", "description": "Default NDEL LLM prompt"},
+    "tools": {
+        "uri": "ndel://docs/tools",
+        "name": "NDEL Tools",
+        "description": "List of available MCP tools and their purpose",
+    },
+}
+
 
 def _bool_env(name: str, default: bool = False) -> bool:
     val = os.getenv(name)
@@ -458,9 +470,8 @@ async def list_docs() -> Dict[str, Any]:
     return _safe_execute(
         lambda: {
             "docs": [
-                {"name": name, "path": str(path)}
-                for name, path in DOC_PATHS.items()
-                if path.exists()
+                {"name": meta["name"], "uri": meta["uri"], "description": meta.get("description", "")}
+                for meta in RESOURCES.values()
             ]
         }
     )
@@ -471,9 +482,34 @@ async def get_doc(name: str) -> Dict[str, str]:
     """Retrieve a documentation file by name."""
 
     def _run():
-        if name not in DOC_PATHS:
+        if name == "grammar":
+            return {"name": "grammar", "content": NDEL_GRAMMAR}
+        if name == "prompt":
+            return {"name": "prompt", "content": DEFAULT_NDEL_PROMPT}
+        if name == "tools":
+            tools = [
+                "describe_python_text",
+                "describe_sql_text",
+                "describe_sql_and_python_text",
+                "describe_python_json",
+                "describe_sql_json",
+                "describe_sql_and_python_json",
+                "pipeline_diff",
+                "validate_config_tool",
+                "validate_pipeline_structural",
+                "build_prompt",
+                "ndel_grammar",
+                "validate_ndel",
+                "ndel_prompt_template",
+                "synthesize_ndel",
+                "health",
+                "list_docs",
+                "get_doc",
+            ]
+            return {"name": "tools", "content": "\n".join(tools)}
+        if name not in RESOURCES or "path" not in RESOURCES[name]:
             raise ValueError(f"Unknown doc: {name}")
-        path = DOC_PATHS[name]
+        path = Path(RESOURCES[name]["path"])
         if not path.exists():
             raise FileNotFoundError(f"Doc not found: {path}")
         return {"name": name, "content": path.read_text(encoding="utf-8")}
