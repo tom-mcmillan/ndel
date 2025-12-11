@@ -62,6 +62,8 @@ Implementation code → parsed (Python/SQL) → semantic model (datasets, transf
 - [Cookbook: CI Integration](docs/cookbook_ci_integration.md)
 - [Cookbook: Custom Feature Store Detector](docs/cookbook_custom_feature_store_detector.md)
 - [MCP Server Guide](docs/mcp_server.md)
+- [Examples (quick reference)](docs/examples.md)
+- Design artifacts (proto specs): `design/proto/ndel/`
 
 ## MCP Server Quickstart (local)
 

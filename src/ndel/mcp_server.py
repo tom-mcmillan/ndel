@@ -359,8 +359,7 @@ async def get_doc(name: str) -> Dict[str, str]:
     return _safe_execute(lambda: {"name": name, "content": _read_doc(name)})
 
 
-@mcp.tool
-async def health() -> Dict[str, Any]:
+async def _health_impl() -> Dict[str, Any]:
     """Lightweight health check with version and basic config flags."""
 
     return {
@@ -368,6 +367,9 @@ async def health() -> Dict[str, Any]:
         "version": NDEL_VERSION,
         "privacy_safe_mode": _bool_env("NDEL_PRIVACY_SAFE", False),
     }
+
+
+health = mcp.tool(_health_impl)
 
 
 if __name__ == "__main__":

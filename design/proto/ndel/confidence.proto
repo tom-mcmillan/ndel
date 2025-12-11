@@ -1,0 +1,408 @@
+// NDEL Confidence System Protocol Buffer Definition
+// Version: 0.1.0
+
+syntax = "proto3";
+
+package ndel.confidence;
+
+option go_package = "github.com/yourusername/ndel/go/confidence";
+option java_package = "com.ndel.confidence";
+option java_multiple_files = true;
+
+import "google/protobuf/timestamp.proto";
+
+// Confidence score with detailed breakdown
+message Confidence {
+  double score = 1;  // Overall confidence [0.0, 1.0]
+  
+  // Component breakdown
+  repeated Component components = 2;
+  
+  // Confidence level classification
+  Level level = 3;
+  
+  // How this confidence was calculated
+  CalculationMethod method = 4;
+  
+  // Historical accuracy (if available)
+  HistoricalAccuracy historical = 5;
+  
+  // Metadata
+  Metadata metadata = 6;
+}
+
+// Confidence level categories
+enum Level {
+  VERY_LOW = 0;     // [0.0, 0.2)
+  LOW = 1;          // [0.2, 0.4)
+  MODERATE = 2;     // [0.4, 0.6)
+  HIGH = 3;         // [0.6, 0.8)
+  VERY_HIGH = 4;    // [0.8, 1.0]
+}
+
+// Component of confidence calculation
+message Component {
+  string name = 1;         // Component identifier
+  double value = 2;        // Raw value
+  double weight = 3;       // Weight in final calculation
+  double contribution = 4; // value * weight
+  string description = 5;  // Human-readable description
+  
+  ComponentType type = 6;
+}
+
+enum ComponentType {
+  RULE_MATCH = 0;      // How well fuzzy value matches rules
+  CONTEXT_FIT = 1;     // How well context matches
+  HISTORICAL = 2;      // Historical accuracy
+  DOMAIN_EXPERTISE = 3; // Domain-specific confidence
+  USER_FEEDBACK = 4;   // User correction history
+  MODEL_CERTAINTY = 5; // ML model confidence
+  SEMANTIC_SIMILARITY = 6; // Semantic distance
+}
+
+// How confidence was calculated
+message CalculationMethod {
+  enum Method {
+    WEIGHTED_AVERAGE = 0;
+    MINIMUM = 1;
+    MAXIMUM = 2;
+    HARMONIC_MEAN = 3;
+    GEOMETRIC_MEAN = 4;
+    CUSTOM = 5;
+  }
+  
+  Method method = 1;
+  string custom_formula = 2;  // If method is CUSTOM
+  repeated string inputs = 3; // Input variables used
+}
+
+// Historical accuracy data
+message HistoricalAccuracy {
+  int32 total_uses = 1;
+  int32 successful_uses = 2;
+  double success_rate = 3;
+  
+  // Recent performance
+  repeated HistoricalPoint recent_history = 4;
+  
+  // Trend
+  Trend trend = 5;
+}
+
+message HistoricalPoint {
+  google.protobuf.Timestamp timestamp = 1;
+  double confidence = 2;
+  bool was_correct = 3;
+  string context = 4;
+}
+
+message Trend {
+  enum Direction {
+    DECLINING = 0;
+    STABLE = 1;
+    IMPROVING = 2;
+  }
+  
+  Direction direction = 1;
+  double slope = 2;  // Rate of change
+  double volatility = 3;
+}
+
+// Metadata about confidence calculation
+message Metadata {
+  google.protobuf.Timestamp calculated_at = 1;
+  string domain = 2;
+  string calculator_version = 3;
+  map<string, string> properties = 4;
+  int64 calculation_time_us = 5;
+}
+
+// Confidence requirement specification
+message ConfidenceRequirement {
+  double minimum_score = 1;
+  Level minimum_level = 2;
+  
+  // Required components
+  repeated ComponentRequirement components = 3;
+  
+  // Action if requirement not met
+  FailureAction failure_action = 4;
+}
+
+message ComponentRequirement {
+  ComponentType type = 1;
+  double minimum_value = 2;
+}
+
+enum FailureAction {
+  ERROR = 0;           // Throw error
+  WARNING = 1;         // Continue with warning
+  REQUEST_CONFIRMATION = 2; // Ask user
+  USE_ALTERNATIVE = 3; // Try alternative interpretation
+  FALLBACK = 4;        // Use fallback value
+}
+
+// Confidence propagation rules
+message PropagationRule {
+  string name = 1;
+  
+  OperatorType operator = 2;
+  
+  PropagationMethod method = 3;
+  
+  // Custom formula if method is CUSTOM
+  string custom_formula = 4;
+}
+
+enum OperatorType {
+  AND = 0;
+  OR = 1;
+  NOT = 2;
+  COMPARISON = 3;
+  ARITHMETIC = 4;
+  CONDITIONAL = 5;
+  FUNCTION_CALL = 6;
+}
+
+enum PropagationMethod {
+  MINIMUM = 0;        // min(inputs)
+  MAXIMUM = 1;        // max(inputs)
+  AVERAGE = 2;        // avg(inputs)
+  WEIGHTED = 3;       // weighted avg
+  PRODUCT = 4;        // multiply
+  HARMONIC = 5;       // harmonic mean
+  CUSTOM_METHOD = 6;  // custom formula
+}
+
+// Confidence adjustment based on feedback
+message ConfidenceAdjustment {
+  double original_score = 1;
+  double adjusted_score = 2;
+  
+  AdjustmentReason reason = 3;
+  
+  double adjustment_delta = 4;
+  
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+message AdjustmentReason {
+  enum Type {
+    USER_CORRECTION = 0;
+    EXECUTION_SUCCESS = 1;
+    EXECUTION_FAILURE = 2;
+    PEER_VALIDATION = 3;
+    TEMPORAL_DECAY = 4;
+    CONTEXT_CHANGE = 5;
+  }
+  
+  Type type = 1;
+  string description = 2;
+  double impact = 3;  // How much this affects confidence
+}
+
+// Confidence calibration data
+message CalibrationData {
+  // Bins for calibration curve
+  repeated CalibrationBin bins = 1;
+  
+  // Overall calibration metrics
+  CalibrationMetrics metrics = 2;
+  
+  // Timestamp of calibration
+  google.protobuf.Timestamp calibrated_at = 3;
+}
+
+message CalibrationBin {
+  double confidence_min = 1;
+  double confidence_max = 2;
+  double average_confidence = 3;
+  double actual_accuracy = 4;
+  int32 sample_count = 5;
+}
+
+message CalibrationMetrics {
+  double expected_calibration_error = 1;  // ECE
+  double maximum_calibration_error = 2;   // MCE
+  double brier_score = 3;
+  double reliability = 4;
+  double resolution = 5;
+  double uncertainty = 6;
+}
+
+// Confidence learning record
+message LearningRecord {
+  string fuzzy_value = 1;
+  string context = 2;
+  double predicted_confidence = 3;
+  double actual_confidence = 4;
+  bool was_successful = 5;
+  
+  google.protobuf.Timestamp timestamp = 6;
+  
+  // Features used for learning
+  map<string, double> features = 7;
+  
+  // Feedback received
+  Feedback feedback = 8;
+}
+
+message Feedback {
+  enum Type {
+    IMPLICIT_SUCCESS = 0;  // Query executed successfully
+    IMPLICIT_FAILURE = 1;  // Query failed
+    EXPLICIT_CORRECT = 2;  // User confirmed correct
+    EXPLICIT_INCORRECT = 3; // User marked incorrect
+    ALTERNATIVE_CHOSEN = 4; // User chose alternative
+  }
+  
+  Type type = 1;
+  string details = 2;
+  double quality_score = 3;  // Quality of this feedback signal
+}
+
+// Confidence model for machine learning
+message ConfidenceModel {
+  string model_id = 1;
+  string model_type = 2;  // "logistic", "gradient_boost", "neural"
+  
+  // Feature configuration
+  repeated FeatureConfig features = 3;
+  
+  // Model parameters (serialized)
+  bytes model_data = 4;
+  
+  // Performance metrics
+  ModelMetrics metrics = 5;
+  
+  // Training metadata
+  TrainingInfo training = 6;
+}
+
+message FeatureConfig {
+  string name = 1;
+  string type = 2;  // "numeric", "categorical", "embedding"
+  bool required = 3;
+  string extraction_expr = 4;  // How to extract this feature
+}
+
+message ModelMetrics {
+  double accuracy = 1;
+  double precision = 2;
+  double recall = 3;
+  double f1_score = 4;
+  double auc_roc = 5;
+  map<string, double> custom_metrics = 6;
+}
+
+message TrainingInfo {
+  google.protobuf.Timestamp trained_at = 1;
+  int32 training_samples = 2;
+  int32 validation_samples = 3;
+  int32 epochs = 4;
+  double learning_rate = 5;
+  string optimizer = 6;
+  map<string, string> hyperparameters = 7;
+}
+
+// Confidence aggregation for complex expressions
+message AggregatedConfidence {
+  // Individual confidence scores
+  repeated ConfidenceEntry entries = 1;
+  
+  // Aggregated result
+  Confidence aggregated = 2;
+  
+  // Aggregation method used
+  AggregationMethod method = 3;
+  
+  // Confidence graph (for visualization)
+  ConfidenceGraph graph = 4;
+}
+
+message ConfidenceEntry {
+  string expression_id = 1;
+  string expression_text = 2;
+  Confidence confidence = 3;
+  double weight = 4;
+}
+
+message AggregationMethod {
+  string name = 1;
+  string formula = 2;
+  map<string, double> parameters = 3;
+}
+
+message ConfidenceGraph {
+  repeated Node nodes = 1;
+  repeated Edge edges = 2;
+}
+
+message Node {
+  string id = 1;
+  string label = 2;
+  double confidence = 3;
+  NodeType type = 4;
+}
+
+enum NodeType {
+  EXPRESSION = 0;
+  OPERATOR = 1;
+  FUZZY_VALUE = 2;
+  LITERAL = 3;
+}
+
+message Edge {
+  string from_id = 1;
+  string to_id = 2;
+  double confidence_flow = 3;
+  string label = 4;
+}
+
+// Confidence policy for an organization/domain
+message ConfidencePolicy {
+  string policy_id = 1;
+  string domain = 2;
+  
+  // Default requirements
+  ConfidenceRequirement default_requirement = 3;
+  
+  // Operation-specific requirements
+  map<string, ConfidenceRequirement> operation_requirements = 4;
+  
+  // Propagation rules
+  repeated PropagationRule propagation_rules = 5;
+  
+  // Adjustment rules
+  repeated AdjustmentRule adjustment_rules = 6;
+  
+  // Calibration settings
+  CalibrationSettings calibration = 7;
+}
+
+message AdjustmentRule {
+  string name = 1;
+  string condition = 2;  // NDEL expression
+  AdjustmentAction action = 3;
+}
+
+message AdjustmentAction {
+  enum Type {
+    MULTIPLY = 0;
+    ADD = 1;
+    SET = 2;
+    DECAY = 3;
+  }
+  
+  Type type = 1;
+  double value = 2;
+  string reason = 3;
+}
+
+message CalibrationSettings {
+  bool enabled = 1;
+  int32 minimum_samples = 2;
+  double recalibration_threshold = 3;  // Recalibrate if ECE exceeds this
+  int32 recalibration_interval_days = 4;
+}
