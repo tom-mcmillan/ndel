@@ -4,7 +4,7 @@ import re
 from typing import Any
 
 from src.config import AbstractionLevel, NdelConfig
-from src.pipeline import Dataset, Feature, Metric, Model, Pipeline, Transformation
+from src.types import Dataset, Feature, Metric, Model, Pipeline, Transformation
 from src.grammar import validate_ndel_text
 
 

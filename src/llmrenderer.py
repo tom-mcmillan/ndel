@@ -4,7 +4,7 @@ import json
 from typing import Any, Callable, Dict
 
 from src.config import NdelConfig
-from src.pipeline import Pipeline, pipeline_to_dict
+from src.types import Pipeline, pipeline_to_dict
 
 # User-supplied LLM callback; NDEL does not know how this is implemented.
 LLMGenerate = Callable[[str], str]

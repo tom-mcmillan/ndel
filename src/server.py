@@ -11,7 +11,7 @@ from fastmcp import FastMCP
 
 from src import __version__ as NDEL_VERSION
 from src.config import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
-from src.pipeline import (
+from src.types import (
     Dataset,
     Feature,
     Metric,

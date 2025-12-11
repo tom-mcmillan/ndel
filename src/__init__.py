@@ -16,7 +16,7 @@ from src.describe import (
     validate_config,
 )
 from src.config import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
-from src.pipeline import (
+from src.types import (
     Dataset,
     Feature,
     Metric,
