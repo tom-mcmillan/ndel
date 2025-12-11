@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
-from ndel.config.core import AbstractionLevel, NdelConfig
-from ndel.pipeline.semantic_model import Dataset, Feature, Model, Pipeline
+from src.config.core import AbstractionLevel, NdelConfig
+from src.pipeline.semantic_model import Dataset, Feature, Model, Pipeline
 
 
 @dataclass

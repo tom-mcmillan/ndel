@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ndel.pipeline.semantic_model import Pipeline
+from src.pipeline.semantic_model import Pipeline
 
 
 @dataclass

@@ -2,7 +2,7 @@
 
 __version__ = "0.2.0"
 
-from ndel.api.describe import (
+from src.api.describe import (
     describe_python_source,
     describe_callable,
     describe_callable_with_llm,
@@ -15,10 +15,10 @@ from ndel.api.describe import (
     pipeline_to_json,
     validate_config,
 )
-from ndel.config.core import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
-from ndel.pipeline.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
-from ndel.pipeline.validation import ValidationIssue
-from ndel.rendering.llm_renderer import LLMGenerate, render_pipeline_with_llm
+from src.config.core import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
+from src.pipeline.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
+from src.pipeline.validation import ValidationIssue
+from src.rendering.llm_renderer import LLMGenerate, render_pipeline_with_llm
 
 __all__ = [
     # Primary public API

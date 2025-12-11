@@ -9,16 +9,16 @@ from typing import Any, Dict, List, Optional
 
 from fastmcp import FastMCP
 
-from ndel import __version__ as NDEL_VERSION
-from ndel.config.core import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
-from ndel.pipeline.diff import diff_pipelines
-from ndel.pipeline.lineage import merge_pipelines
-from ndel.rendering.llm_renderer import build_ndel_prompt
-from ndel.analyzers.python_analyzer import analyze_python_source
-from ndel.pipeline.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
-from ndel.pipeline.serialization import pipeline_to_dict
-from ndel.analyzers.sql_analyzer import analyze_sql_source
-from ndel.pipeline.validation import validate_config_against_pipeline
+from src import __version__ as NDEL_VERSION
+from src.config.core import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
+from src.pipeline.diff import diff_pipelines
+from src.pipeline.lineage import merge_pipelines
+from src.rendering.llm_renderer import build_ndel_prompt
+from src.analyzers.python_analyzer import analyze_python_source
+from src.pipeline.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
+from src.pipeline.serialization import pipeline_to_dict
+from src.analyzers.sql_analyzer import analyze_sql_source
+from src.pipeline.validation import validate_config_against_pipeline
 
 
 mcp = FastMCP(name="ndel")
@@ -186,7 +186,7 @@ async def describe_python_text(source: str, config: Optional[Dict[str, Any]] = N
     def _run():
         ndel_config = _build_config(config)
         pipeline = analyze_python_source(source, config=ndel_config)
-        from ndel.rendering.render import render_pipeline
+        from src.rendering.render import render_pipeline
         return render_pipeline(pipeline, config=ndel_config)
 
     return _safe_execute(_run)
@@ -199,7 +199,7 @@ async def describe_sql_text(sql: str, config: Optional[Dict[str, Any]] = None) -
     def _run():
         ndel_config = _build_config(config)
         pipeline = analyze_sql_source(sql, config=ndel_config)
-        from ndel.rendering.render import render_pipeline
+        from src.rendering.render import render_pipeline
         return render_pipeline(pipeline, config=ndel_config)
 
     return _safe_execute(_run)
@@ -218,7 +218,7 @@ async def describe_sql_and_python_text(
         p_sql = analyze_sql_source(sql, config=ndel_config)
         p_py = analyze_python_source(py_source, config=ndel_config)
         merged = merge_pipelines(p_sql, p_py)
-        from ndel.rendering.render import render_pipeline
+        from src.rendering.render import render_pipeline
         return render_pipeline(merged, config=ndel_config)
 
     return _safe_execute(_run)

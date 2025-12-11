@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from typing import Any, Callable, Dict
 
-from ndel.config.core import NdelConfig
-from ndel.pipeline.semantic_model import Pipeline
-from ndel.pipeline.serialization import pipeline_to_dict
+from src.config.core import NdelConfig
+from src.pipeline.semantic_model import Pipeline
+from src.pipeline.serialization import pipeline_to_dict
 
 # User-supplied LLM callback; NDEL does not know how this is implemented.
 LLMGenerate = Callable[[str], str]

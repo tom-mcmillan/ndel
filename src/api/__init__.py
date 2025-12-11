@@ -1,4 +1,4 @@
-from ndel.api.describe import (
+from src.api.describe import (
     describe_python_source,
     describe_callable,
     describe_callable_with_llm,

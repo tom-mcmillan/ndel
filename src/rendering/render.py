@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from ndel.config.core import AbstractionLevel, NdelConfig
-from ndel.pipeline.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
+from src.config.core import AbstractionLevel, NdelConfig
+from src.pipeline.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
 
 
 def _apply_privacy(value: str, config: NdelConfig | None) -> str:
