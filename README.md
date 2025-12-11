@@ -61,6 +61,47 @@ Implementation code → parsed (Python/SQL) → semantic model (datasets, transf
 - [Cookbook: Churn-Style Pipeline](docs/cookbook_churn_pipeline.md)
 - [Cookbook: CI Integration](docs/cookbook_ci_integration.md)
 - [Cookbook: Custom Feature Store Detector](docs/cookbook_custom_feature_store_detector.md)
+- [MCP Server Guide](docs/mcp_server.md)
+
+## MCP Server Quickstart (local)
+
+NDEL ships with an MCP server you can run locally over stdio (Crash-style). After install, start it with the `ndel-mcp` console script.
+
+### Install and run
+
+```bash
+pipx install ndel  # or: pip install ndel
+ndel-mcp           # starts stdio MCP server
+```
+
+### Configure in MCP clients
+
+- **Cursor/Claude Code/VS Code (stdio command):**
+  ```json
+  {
+    "mcpServers": {
+      "ndel": { "command": "ndel-mcp" }
+    }
+  }
+  ```
+
+### Configuration knobs (env)
+
+- `NDEL_ABSTRACTION` (`high|medium|low`)
+- `NDEL_HIDE_TABLE_NAMES` (`true|false`)
+- `NDEL_HIDE_PATHS` (`true|false`)
+- `NDEL_REDACT_IDENTIFIERS` (comma list, e.g., `email,ip`)
+- `NDEL_MAX_LITERAL_LEN` (int)
+- `NDEL_PIPELINE_NAME` (string)
+- `NDEL_PRIVACY_SAFE` (`true|false`) — safer defaults (hide tables/paths, redact email/ip)
+
+### Hosting later
+
+MCP spec also allows HTTP/SSE transports. Today NDEL runs stdio by default; for self-hosting you can:
+- Run `ndel-mcp` on a VM/container and let clients exec it via SSH.
+- Add a thin HTTP bridge (POST/GET with JSON-RPC) in front of the stdio server if your client supports HTTP transport.
+
+See [MCP Server Guide](docs/mcp_server.md) for a fuller walkthrough, tool list, Docker usage, and hosting notes.
 
 ## Status
 

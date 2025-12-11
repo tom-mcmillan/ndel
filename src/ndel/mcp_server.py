@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from fastmcp import FastMCP
 
+from ndel import __version__ as NDEL_VERSION
 from ndel.config import AbstractionLevel, DomainConfig, NdelConfig, PrivacyConfig
 from ndel.diff import diff_pipelines
 from ndel.lineage import merge_pipelines
@@ -63,10 +64,13 @@ def _abstraction_from_env(default: AbstractionLevel = AbstractionLevel.MEDIUM) -
 
 
 def _privacy_from_env() -> PrivacyConfig:
+    # Safe mode enables conservative defaults if explicit envs are not provided.
+    safe_mode = _bool_env("NDEL_PRIVACY_SAFE", False)
+    default_redactions = ["email", "ip"] if safe_mode else []
     return PrivacyConfig(
-        hide_table_names=_bool_env("NDEL_HIDE_TABLE_NAMES", False),
-        hide_file_paths=_bool_env("NDEL_HIDE_PATHS", False),
-        redact_identifiers=_list_env("NDEL_REDACT_IDENTIFIERS"),
+        hide_table_names=_bool_env("NDEL_HIDE_TABLE_NAMES", safe_mode),
+        hide_file_paths=_bool_env("NDEL_HIDE_PATHS", safe_mode),
+        redact_identifiers=_list_env("NDEL_REDACT_IDENTIFIERS") or default_redactions,
         max_literal_length=int(os.getenv("NDEL_MAX_LITERAL_LEN", "200")),
     )
 
@@ -109,6 +113,18 @@ def _build_config(payload: Optional[Dict[str, Any]] = None) -> NdelConfig:
         abstraction = next((lvl for lvl in AbstractionLevel if lvl.value == raw_abs), abstraction)
 
     return NdelConfig(privacy=privacy, domain=domain, abstraction=abstraction)
+
+
+def _safe_execute(func, *args, **kwargs):
+    """Run a tool body with optional safety net; honors NDEL_DEBUG to raise."""
+
+    debug = _bool_env("NDEL_DEBUG", False)
+    try:
+        return func(*args, **kwargs)
+    except Exception as exc:  # pragma: no cover - defensive
+        if debug:
+            raise
+        return {"error": str(exc), "type": exc.__class__.__name__}
 
 
 def _filter_fields(cls, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -167,21 +183,26 @@ def _read_doc(name: str) -> str:
 async def describe_python_text(source: str, config: Optional[Dict[str, Any]] = None) -> str:
     """Analyze Python DS/ML code and return deterministic NDEL text."""
 
-    ndel_config = _build_config(config)
-    pipeline = analyze_python_source(source, config=ndel_config)
-    # Render deterministically via render_pipeline (called inside describe)
-    from ndel.render import render_pipeline
-    return render_pipeline(pipeline, config=ndel_config)
+    def _run():
+        ndel_config = _build_config(config)
+        pipeline = analyze_python_source(source, config=ndel_config)
+        from ndel.render import render_pipeline
+        return render_pipeline(pipeline, config=ndel_config)
+
+    return _safe_execute(_run)
 
 
 @mcp.tool
 async def describe_sql_text(sql: str, config: Optional[Dict[str, Any]] = None) -> str:
     """Analyze SQL text and return deterministic NDEL text."""
 
-    ndel_config = _build_config(config)
-    pipeline = analyze_sql_source(sql, config=ndel_config)
-    from ndel.render import render_pipeline
-    return render_pipeline(pipeline, config=ndel_config)
+    def _run():
+        ndel_config = _build_config(config)
+        pipeline = analyze_sql_source(sql, config=ndel_config)
+        from ndel.render import render_pipeline
+        return render_pipeline(pipeline, config=ndel_config)
+
+    return _safe_execute(_run)
 
 
 @mcp.tool
@@ -192,30 +213,33 @@ async def describe_sql_and_python_text(
 ) -> str:
     """Analyze SQL then Python, merge lineage, and return deterministic NDEL text."""
 
-    ndel_config = _build_config(config)
-    p_sql = analyze_sql_source(sql, config=ndel_config)
-    p_py = analyze_python_source(py_source, config=ndel_config)
-    merged = merge_pipelines(p_sql, p_py)
-    from ndel.render import render_pipeline
-    return render_pipeline(merged, config=ndel_config)
+    def _run():
+        ndel_config = _build_config(config)
+        p_sql = analyze_sql_source(sql, config=ndel_config)
+        p_py = analyze_python_source(py_source, config=ndel_config)
+        merged = merge_pipelines(p_sql, p_py)
+        from ndel.render import render_pipeline
+        return render_pipeline(merged, config=ndel_config)
+
+    return _safe_execute(_run)
 
 
 @mcp.tool
 async def describe_python_json(source: str, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Analyze Python and return pipeline JSON."""
 
-    ndel_config = _build_config(config)
-    pipeline = analyze_python_source(source, config=ndel_config)
-    return pipeline_to_dict(pipeline)
+    return _safe_execute(
+        lambda: pipeline_to_dict(analyze_python_source(source, config=_build_config(config)))
+    )
 
 
 @mcp.tool
 async def describe_sql_json(sql: str, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Analyze SQL and return pipeline JSON."""
 
-    ndel_config = _build_config(config)
-    pipeline = analyze_sql_source(sql, config=ndel_config)
-    return pipeline_to_dict(pipeline)
+    return _safe_execute(
+        lambda: pipeline_to_dict(analyze_sql_source(sql, config=_build_config(config)))
+    )
 
 
 @mcp.tool
@@ -226,11 +250,14 @@ async def describe_sql_and_python_json(
 ) -> Dict[str, Any]:
     """Analyze SQL then Python, merge lineage, and return pipeline JSON."""
 
-    ndel_config = _build_config(config)
-    p_sql = analyze_sql_source(sql, config=ndel_config)
-    p_py = analyze_python_source(py_source, config=ndel_config)
-    merged = merge_pipelines(p_sql, p_py)
-    return pipeline_to_dict(merged)
+    def _run():
+        ndel_config = _build_config(config)
+        p_sql = analyze_sql_source(sql, config=ndel_config)
+        p_py = analyze_python_source(py_source, config=ndel_config)
+        merged = merge_pipelines(p_sql, p_py)
+        return pipeline_to_dict(merged)
+
+    return _safe_execute(_run)
 
 
 @mcp.tool
@@ -240,41 +267,44 @@ async def pipeline_diff(
 ) -> Dict[str, Any]:
     """Diff two pipelines (dict form) and return summary plus structured diff."""
 
-    old = _dict_to_pipeline(old_pipeline)
-    new = _dict_to_pipeline(new_pipeline)
-    d = diff_pipelines(old, new)
+    def _run():
+        old = _dict_to_pipeline(old_pipeline)
+        new = _dict_to_pipeline(new_pipeline)
+        d = diff_pipelines(old, new)
 
-    summary_parts: List[str] = []
-    def add(label: str, items: List[str]) -> None:
-        if items:
-            summary_parts.append(f"{label}: {', '.join(items)}")
+        summary_parts: List[str] = []
+        def add(label: str, items: List[str]) -> None:
+            if items:
+                summary_parts.append(f"{label}: {', '.join(items)}")
 
-    add("Datasets added", d.datasets_added)
-    add("Datasets removed", d.datasets_removed)
-    add("Transformations added", d.transformations_added)
-    add("Transformations removed", d.transformations_removed)
-    add("Features added", d.features_added)
-    add("Features removed", d.features_removed)
-    add("Models added", d.models_added)
-    add("Models removed", d.models_removed)
-    add("Metrics added", d.metrics_added)
-    add("Metrics removed", d.metrics_removed)
+        add("Datasets added", d.datasets_added)
+        add("Datasets removed", d.datasets_removed)
+        add("Transformations added", d.transformations_added)
+        add("Transformations removed", d.transformations_removed)
+        add("Features added", d.features_added)
+        add("Features removed", d.features_removed)
+        add("Models added", d.models_added)
+        add("Models removed", d.models_removed)
+        add("Metrics added", d.metrics_added)
+        add("Metrics removed", d.metrics_removed)
 
-    return {
-        "summary": "\n".join(summary_parts) if summary_parts else "No differences",
-        "diff": {
-            "datasets_added": d.datasets_added,
-            "datasets_removed": d.datasets_removed,
-            "transformations_added": d.transformations_added,
-            "transformations_removed": d.transformations_removed,
-            "features_added": d.features_added,
-            "features_removed": d.features_removed,
-            "models_added": d.models_added,
-            "models_removed": d.models_removed,
-            "metrics_added": d.metrics_added,
-            "metrics_removed": d.metrics_removed,
-        },
-    }
+        return {
+            "summary": "\n".join(summary_parts) if summary_parts else "No differences",
+            "diff": {
+                "datasets_added": d.datasets_added,
+                "datasets_removed": d.datasets_removed,
+                "transformations_added": d.transformations_added,
+                "transformations_removed": d.transformations_removed,
+                "features_added": d.features_added,
+                "features_removed": d.features_removed,
+                "models_added": d.models_added,
+                "models_removed": d.models_removed,
+                "metrics_added": d.metrics_added,
+                "metrics_removed": d.metrics_removed,
+            },
+        }
+
+    return _safe_execute(_run)
 
 
 @mcp.tool
@@ -284,45 +314,70 @@ async def validate_config(
 ) -> Dict[str, Any]:
     """Validate NdelConfig against a pipeline dict."""
 
-    ndel_config = _build_config(config)
-    pipe = _dict_to_pipeline(pipeline)
-    issues = validate_config_against_pipeline(ndel_config, pipe)
-    return {
-        "issues": [
-            {"kind": issue.kind, "code": issue.code, "message": issue.message}
-            for issue in issues
-        ]
-    }
+    def _run():
+        ndel_config = _build_config(config)
+        pipe = _dict_to_pipeline(pipeline)
+        issues = validate_config_against_pipeline(ndel_config, pipe)
+        return {
+            "issues": [
+                {"kind": issue.kind, "code": issue.code, "message": issue.message}
+                for issue in issues
+            ]
+        }
+
+    return _safe_execute(_run)
 
 
 @mcp.tool
 async def build_prompt(pipeline: Dict[str, Any], config: Optional[Dict[str, Any]] = None) -> str:
     """Build an LLM-ready NDEL prompt from a pipeline dict."""
 
-    ndel_config = _build_config(config)
-    pipe = _dict_to_pipeline(pipeline)
-    return build_ndel_prompt(pipe, config=ndel_config)
+    return _safe_execute(
+        lambda: build_ndel_prompt(_dict_to_pipeline(pipeline), config=_build_config(config))
+    )
 
 
 @mcp.tool
 async def list_docs() -> Dict[str, Any]:
     """List available NDEL documentation resources."""
 
-    available = [
-        {"name": name, "path": str(path)}
-        for name, path in DOC_PATHS.items()
-        if path.exists()
-    ]
-    return {"docs": available}
+    return _safe_execute(
+        lambda: {
+            "docs": [
+                {"name": name, "path": str(path)}
+                for name, path in DOC_PATHS.items()
+                if path.exists()
+            ]
+        }
+    )
 
 
 @mcp.tool
 async def get_doc(name: str) -> Dict[str, str]:
     """Retrieve a documentation file by name."""
 
-    content = _read_doc(name)
-    return {"name": name, "content": content}
+    return _safe_execute(lambda: {"name": name, "content": _read_doc(name)})
+
+
+@mcp.tool
+async def health() -> Dict[str, Any]:
+    """Lightweight health check with version and basic config flags."""
+
+    return {
+        "status": "ok",
+        "version": NDEL_VERSION,
+        "privacy_safe_mode": _bool_env("NDEL_PRIVACY_SAFE", False),
+    }
 
 
 if __name__ == "__main__":
     mcp.run()
+
+
+def main() -> None:
+    """Console entrypoint for the NDEL MCP server (stdio transport)."""
+
+    mcp.run()
+
+
+__all__ = ["main"]

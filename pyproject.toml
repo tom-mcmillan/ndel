@@ -29,6 +29,9 @@ dependencies = [
     "fastmcp>=2.0.0",
 ]
 
+[project.scripts]
+ndel-mcp = "ndel.mcp_server:main"
+
 
 [project.optional-dependencies]
 dev = [
