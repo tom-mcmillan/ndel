@@ -19,6 +19,7 @@ from src.pipeline.semantic_model import Dataset, Feature, Metric, Model, Pipelin
 from src.pipeline.serialization import pipeline_to_dict
 from src.analyzers.sql_analyzer import analyze_sql_source
 from src.pipeline.validation import validate_config_against_pipeline
+from src.language.spec import describe_grammar, validate_ndel_text
 
 
 mcp = FastMCP(name="ndel")
@@ -32,6 +33,26 @@ DOC_PATHS: Dict[str, Path] = {
     "cookbook_churn": ROOT_DIR / "docs" / "cookbook_churn_pipeline.md",
     "cookbook_feature_store": ROOT_DIR / "docs" / "cookbook_custom_feature_store_detector.md",
 }
+
+
+# ---------------------------------------------------------------------------
+# NDEL grammar helpers
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool
+async def ndel_grammar() -> Dict[str, str]:
+    """Return the human-readable NDEL grammar description."""
+
+    return {"grammar": describe_grammar()}
+
+
+@mcp.tool
+async def validate_ndel(text: str) -> Dict[str, Any]:
+    """Validate NDEL text against expected shape; returns warnings if any."""
+
+    warnings = validate_ndel_text(text)
+    return {"warnings": warnings, "is_valid": len(warnings) == 0}
 
 
 # ---------------------------------------------------------------------------
@@ -335,6 +356,36 @@ async def build_prompt(pipeline: Dict[str, Any], config: Optional[Dict[str, Any]
     return _safe_execute(
         lambda: build_ndel_prompt(_dict_to_pipeline(pipeline), config=_build_config(config))
     )
+
+
+@mcp.tool
+async def synthesize_ndel(
+    intent: str,
+    config: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Create a minimal NDEL pipeline from high-level intent text.
+
+    This is a bridge for conversational agents: it emits a stub Pipeline with
+    the intent as description and a single dataset placeholder, then renders
+    deterministically. Callers can combine with ndel_grammar/validate_ndel for
+    stricter checks.
+    """
+
+    def _run():
+        ndel_config = _build_config(config)
+        placeholder = Pipeline(
+            name=ndel_config.domain.pipeline_name or "intent_pipeline",
+            datasets=[Dataset(name="input", description="user intent input")],
+            transformations=[],
+            features=[],
+            models=[],
+            metrics=[],
+            description=intent,
+        )
+        from src.rendering.render import render_pipeline
+        return render_pipeline(placeholder, config=ndel_config)
+
+    return _safe_execute(_run)
 
 
 @mcp.tool

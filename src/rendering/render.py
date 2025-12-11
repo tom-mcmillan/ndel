@@ -5,6 +5,7 @@ from typing import Any
 
 from src.config.core import AbstractionLevel, NdelConfig
 from src.pipeline.semantic_model import Dataset, Feature, Metric, Model, Pipeline, Transformation
+from src.language.spec import validate_ndel_text
 
 
 def _apply_privacy(value: str, config: NdelConfig | None) -> str:
@@ -159,7 +160,15 @@ def render_pipeline(pipeline: Pipeline, config: NdelConfig | None = None) -> str
     add_section("models", pipeline.models, render_model)
     add_section("metrics", pipeline.metrics, render_metric)
 
-    return "\n".join(lines) + "\n"
+    output = "\n".join(lines) + "\n"
+
+    # Early warning if renderer drifts from expected NDEL shape.
+    warnings = validate_ndel_text(output)
+    if warnings:
+        lines.append(f"# validator_warnings: {'; '.join(warnings)}")
+        output = "\n".join(lines) + "\n"
+
+    return output
 
 
 __all__ = ["render_pipeline"]
