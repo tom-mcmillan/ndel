@@ -7,6 +7,8 @@ from dataclasses import fields
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import yaml
+
 from fastmcp import FastMCP
 
 from src import __version__ as NDEL_VERSION
@@ -79,8 +81,7 @@ def _list_env(name: str) -> list[str]:
     return [part.strip() for part in val.split(",") if part.strip()]
 
 
-def _abstraction_from_env(default: AbstractionLevel = AbstractionLevel.MEDIUM) -> AbstractionLevel:
-    raw = os.getenv("NDEL_ABSTRACTION")
+def _abstraction_from_str(raw: str | None, default: AbstractionLevel = AbstractionLevel.MEDIUM) -> AbstractionLevel:
     if not raw:
         return default
     raw_lower = raw.lower()
@@ -91,7 +92,6 @@ def _abstraction_from_env(default: AbstractionLevel = AbstractionLevel.MEDIUM) -
 
 
 def _privacy_from_env() -> PrivacyConfig:
-    # Safe mode enables conservative defaults if explicit envs are not provided.
     safe_mode = _bool_env("NDEL_PRIVACY_SAFE", False)
     default_redactions = ["email", "ip"] if safe_mode else []
     return PrivacyConfig(
@@ -108,15 +108,53 @@ def _domain_from_env() -> DomainConfig:
     )
 
 
-def _build_config(payload: Optional[Dict[str, Any]] = None) -> NdelConfig:
+def _load_file_config(config_path: Path | None) -> Dict[str, Any]:
+    if not config_path:
+        return {}
+    if not config_path.exists():
+        return {}
+    with config_path.open("r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def _discover_config_file(start_dir: Path) -> Path | None:
+    for candidate in [start_dir / ".ndel.yml", start_dir / ".ndel.yaml", start_dir / ".ndel.json"]:
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _build_config(payload: Optional[Dict[str, Any]] = None, config_path: str | None = None) -> NdelConfig:
     payload = payload or {}
 
-    # Start with env defaults
+    file_config_path = Path(config_path) if config_path else _discover_config_file(Path.cwd())
+    file_config = _load_file_config(file_config_path)
+
     privacy = _privacy_from_env()
     domain = _domain_from_env()
-    abstraction = _abstraction_from_env()
+    abstraction = _abstraction_from_str(os.getenv("NDEL_ABSTRACTION"))
 
-    # Overlay payload values if provided
+    file_privacy = file_config.get("privacy") if isinstance(file_config, dict) else None
+    if isinstance(file_privacy, dict):
+        privacy = PrivacyConfig(
+            hide_table_names=file_privacy.get("hide_table_names", privacy.hide_table_names),
+            hide_file_paths=file_privacy.get("hide_file_paths", privacy.hide_file_paths),
+            redact_identifiers=file_privacy.get("redact_identifiers", privacy.redact_identifiers),
+            max_literal_length=file_privacy.get("max_literal_length", privacy.max_literal_length),
+        )
+
+    file_domain = file_config.get("domain") if isinstance(file_config, dict) else None
+    if isinstance(file_domain, dict):
+        domain = DomainConfig(
+            dataset_aliases=file_domain.get("dataset_aliases", domain.dataset_aliases),
+            model_aliases=file_domain.get("model_aliases", domain.model_aliases),
+            feature_aliases=file_domain.get("feature_aliases", domain.feature_aliases),
+            pipeline_name=file_domain.get("pipeline_name", domain.pipeline_name),
+        )
+
+    file_abstraction = file_config.get("abstraction") if isinstance(file_config, dict) else None
+    abstraction = _abstraction_from_str(file_abstraction, abstraction)
+
     if "privacy" in payload and payload["privacy"] is not None:
         p = payload["privacy"]
         privacy = PrivacyConfig(
@@ -136,8 +174,7 @@ def _build_config(payload: Optional[Dict[str, Any]] = None) -> NdelConfig:
         )
 
     if "abstraction" in payload and payload["abstraction"] is not None:
-        raw_abs = str(payload["abstraction"]).lower()
-        abstraction = next((lvl for lvl in AbstractionLevel if lvl.value == raw_abs), abstraction)
+        abstraction = _abstraction_from_str(str(payload["abstraction"]), abstraction)
 
     return NdelConfig(privacy=privacy, domain=domain, abstraction=abstraction)
 
