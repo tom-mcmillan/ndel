@@ -23,9 +23,9 @@ from src.pipeline import (
     pipeline_to_dict,
     validate_config_against_pipeline,
 )
-from src.llm_renderer import build_ndel_prompt
-from src.python_analyzer import analyze_python_source
-from src.sql_analyzer import analyze_sql_source
+from src.llmrenderer import build_ndel_prompt
+from src.pythonanalyzer import analyze_python_source
+from src.sqlanalyzer import analyze_sql_source
 from src.language.spec import describe_grammar, validate_ndel_text
 
 

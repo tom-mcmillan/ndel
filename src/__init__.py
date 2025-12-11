@@ -25,7 +25,7 @@ from src.pipeline import (
     Transformation,
     ValidationIssue,
 )
-from src.llm_renderer import LLMGenerate, render_pipeline_with_llm
+from src.llmrenderer import LLMGenerate, render_pipeline_with_llm
 
 __all__ = [
     # Primary public API
