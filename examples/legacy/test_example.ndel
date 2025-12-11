@@ -1,0 +1,5 @@
+// Simple NDEL test
+@domain("soccer")
+
+// Find players matching criteria
+age < "young" && performance is "good"
